@@ -2,7 +2,9 @@
   "name": "Tiem dep Cherish",
   "version": "0.1.0",
   "private": true,
-
+  "description": "Tiem dep Cherish is a project to help people find their Cherish moments.",
+  "author": "thong",
+  "license": "MIT",
   "scripts": {
     "build": "next build",
     "dev": "next dev",
