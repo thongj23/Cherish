@@ -13,8 +13,8 @@ admin.initializeApp({
 const db = admin.firestore();
 
 async function seedAdmin() {
-  const email = "admin@example.com";
-  const plainPassword = "superSecretPassword123";
+  const email = "bobobo123@gmail.com";
+  const plainPassword = "bobobo123";
 
   const salt = bcrypt.genSaltSync(10);
   const passwordHash = bcrypt.hashSync(plainPassword, salt);
