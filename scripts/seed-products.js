@@ -87,25 +87,23 @@ const mockProducts = [
 ]
 
 async function clearExistingProducts() {
-  console.log("🗑️ Xóa dữ liệu cũ...")
+
   const productsCollection = collection(db, "products")
   const snapshot = await getDocs(productsCollection)
 
   const deletePromises = snapshot.docs.map((doc) => deleteDoc(doc.ref))
   await Promise.all(deletePromises)
 
-  console.log(`✅ Đã xóa ${snapshot.docs.length} sản phẩm cũ`)
+
 }
 
 async function seedProducts() {
   try {
-    console.log("🌱 Bắt đầu đổ mock data...")
 
     // Xóa dữ liệu cũ trước
     await clearExistingProducts()
 
-    // Thêm sản phẩm mới
-    console.log("📦 Đang thêm sản phẩm mới...")
+
     const productsCollection = collection(db, "products")
 
     for (let i = 0; i < mockProducts.length; i++) {
@@ -115,15 +113,10 @@ async function seedProducts() {
         createdAt: new Date(),
         updatedAt: new Date(),
       })
-      console.log(`✅ Đã thêm: ${product.name}`)
+
     }
 
-    console.log(`🎉 Hoàn thành! Đã thêm ${mockProducts.length} sản phẩm`)
-    console.log("📊 Thống kê:")
-    console.log(`   - Sản phẩm nổi bật: ${mockProducts.filter((p) => p.featured).length}`)
-    console.log(`   - Chăm sóc tóc: ${mockProducts.filter((p) => p.category === "Chăm sóc tóc").length}`)
-    console.log(`   - Chăm sóc da: ${mockProducts.filter((p) => p.category === "Chăm sóc da").length}`)
-    console.log(`   - Trang điểm: ${mockProducts.filter((p) => p.category === "Trang điểm").length}`)
+  
   } catch (error) {
     console.error("❌ Lỗi khi đổ dữ liệu:", error)
   }

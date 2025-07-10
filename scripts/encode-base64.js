@@ -9,7 +9,7 @@ try {
   const buf = readFileSync(inPath);
   const b64 = buf.toString("base64");
   writeFileSync(outPath, b64);
-  console.log(`✅ Wrote Base64 to ${outPath}`);
+
 } catch (err) {
   console.error("❌ Error reading or writing file:", err);
 }

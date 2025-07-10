@@ -89,14 +89,14 @@ export const mockProducts = [
 
 export async function seedMockData() {
   try {
-    console.log("🌱 Bắt đầu đổ mock data...")
+
 
     // Xóa dữ liệu cũ
     const productsCollection = collection(db, "products")
     const snapshot = await getDocs(productsCollection)
     const deletePromises = snapshot.docs.map((doc) => deleteDoc(doc.ref))
     await Promise.all(deletePromises)
-    console.log(`🗑️ Đã xóa ${snapshot.docs.length} sản phẩm cũ`)
+
 
     // Thêm sản phẩm mới
     for (const product of mockProducts) {
@@ -107,7 +107,7 @@ export async function seedMockData() {
       })
     }
 
-    console.log(`🎉 Hoàn thành! Đã thêm ${mockProducts.length} sản phẩm`)
+
     return { success: true, count: mockProducts.length }
   } catch (error) {
     console.error("❌ Lỗi khi đổ dữ liệu:", error)

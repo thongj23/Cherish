@@ -25,7 +25,7 @@ async function seedAdmin() {
     createdAt: new Date(),
   });
 
-  console.log("✅ Admin account created with ID:", docRef.id);
+
 }
 
 seedAdmin().catch(console.error);
