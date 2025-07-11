@@ -4,18 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import type { ProductFormData } from "@/components/adminPage/ProductFormDialog"
-
-export interface Product {
-  id: string
-  name: string
-  description: string
-  imageUrl: string
-  price?: number
-  category?: string
-  featured?: boolean
-  quantity?: number
-  size?: number
-}
+import type { Product } from "@/types/product/product"
 
 export default function useAdminProducts() {
   const [products, setProducts] = useState<Product[]>([])
@@ -78,6 +67,15 @@ export default function useAdminProducts() {
     setIsImageModalOpen(true)
   }
 
+  const handleToggleHidden = (id: string, isHidden: boolean) => {
+    // TODO: Update logic ở đây, ví dụ Firestore:
+    setProducts(prev =>
+      prev.map(p =>
+        p.id === id ? { ...p, isHidden } : p
+      )
+    )
+  }
+
   return {
     products,
     loading,
@@ -87,6 +85,7 @@ export default function useAdminProducts() {
     handleSubmit,
     handleEdit,
     handleDelete,
+    handleToggleHidden,
     isImageModalOpen,
     setIsImageModalOpen,
     selectedImages,

@@ -32,6 +32,20 @@ export interface ProductFormData {
   featured: boolean
   quantity: string
   size: number
+  isHidden?: boolean
+}
+
+// ✅ Type riêng cho lỗi:
+type ProductFormErrors = {
+  name?: string
+  description?: string
+  imageUrl?: string
+  price?: string
+  category?: string
+  featured?: string
+  quantity?: string
+  size?: string
+  isHidden?: string
 }
 
 interface ProductFormDialogProps {
@@ -56,14 +70,20 @@ export default function ProductFormDialog({
     featured: false,
     quantity: "",
     size: 0,
+    isHidden: false,
   })
 
+  const [errors, setErrors] = useState<ProductFormErrors>({})
   const [isSelectImageOpen, setIsSelectImageOpen] = useState(false)
   const images = useImages()
 
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData)
+      setFormData({
+        ...initialData,
+        isHidden: initialData.isHidden ?? false,
+      })
+      setErrors({})
     } else {
       setFormData({
         name: "",
@@ -74,7 +94,9 @@ export default function ProductFormDialog({
         featured: false,
         quantity: "",
         size: 0,
+        isHidden: false,
       })
+      setErrors({})
     }
   }, [initialData, open])
 
@@ -86,11 +108,38 @@ export default function ProductFormDialog({
       ...prev,
       [name]: name === "size" ? Number(value) : value,
     }))
+    setErrors((prev) => ({ ...prev, [name]: "" }))
   }
+
+  const validateForm = () => {
+    const newErrors: ProductFormErrors = {}
+    if (!formData.name.trim()) newErrors.name = "Tên sản phẩm không được để trống"
+    if (!formData.imageUrl) newErrors.imageUrl = "Hình ảnh không được để trống"
+    if (!formData.price.trim()) newErrors.price = "Giá không được để trống"
+    if (!formData.category) newErrors.category = "Danh mục không được để trống"
+    if (!formData.quantity.trim()) newErrors.quantity = "Số lượng không được để trống"
+    if (formData.size === 0) newErrors.size = "Size không được để trống"
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (validateForm()) {
+      onSubmit(formData)
+    }
+  }
+
+  const isSubmitDisabled =
+    !formData.name.trim() ||
+    !formData.imageUrl ||
+    !formData.price.trim() ||
+    !formData.category ||
+    !formData.quantity.trim() ||
+    formData.size === 0
 
   return (
     <>
-      {/* === FORM CHÍNH === */}
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg sm:max-w-md md:max-w-lg flex flex-col max-h-[90vh] sm:max-h-[80vh]">
           <DialogHeader>
@@ -100,13 +149,7 @@ export default function ProductFormDialog({
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-1">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                onSubmit(formData)
-              }}
-              className="space-y-4"
-            >
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label>Tên sản phẩm</Label>
                 <Input
@@ -116,6 +159,9 @@ export default function ProductFormDialog({
                   required
                   className="w-full"
                 />
+                {errors.name && (
+                  <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+                )}
               </div>
 
               <div>
@@ -146,6 +192,9 @@ export default function ProductFormDialog({
                     <ImageIcon className="w-4 h-4 mr-1" /> Chọn ảnh
                   </Button>
                 </div>
+                {errors.imageUrl && (
+                  <p className="text-red-500 text-xs mt-1">{errors.imageUrl}</p>
+                )}
                 {formData.imageUrl && (
                   <div className="mt-2">
                     <Image
@@ -165,8 +214,12 @@ export default function ProductFormDialog({
                   name="price"
                   value={formData.price}
                   onChange={handleChange}
+                  required
                   className="w-full"
                 />
+                {errors.price && (
+                  <p className="text-red-500 text-xs mt-1">{errors.price}</p>
+                )}
               </div>
 
               <div>
@@ -181,10 +234,13 @@ export default function ProductFormDialog({
                     <SelectValue placeholder="Chọn danh mục" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Dép">Dép</SelectItem>
-                    <SelectItem value="Champ">Champ</SelectItem>
+                    <SelectItem value="Dep">Dép</SelectItem>
+                    <SelectItem value="Charm">Charm</SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.category && (
+                  <p className="text-red-500 text-xs mt-1">{errors.category}</p>
+                )}
               </div>
 
               <div>
@@ -197,8 +253,12 @@ export default function ProductFormDialog({
                   placeholder="Nhập size (ví dụ: 36, 37...)"
                   min={30}
                   max={50}
+                  required
                   className="w-full"
                 />
+                {errors.size && (
+                  <p className="text-red-500 text-xs mt-1">{errors.size}</p>
+                )}
               </div>
 
               <div>
@@ -207,8 +267,12 @@ export default function ProductFormDialog({
                   name="quantity"
                   value={formData.quantity}
                   onChange={handleChange}
+                  required
                   className="w-full"
                 />
+                {errors.quantity && (
+                  <p className="text-red-500 text-xs mt-1">{errors.quantity}</p>
+                )}
               </div>
 
               <div className="flex items-center justify-between">
@@ -221,6 +285,16 @@ export default function ProductFormDialog({
                 />
               </div>
 
+              <div className="flex items-center justify-between">
+                <Label>Ẩn sản phẩm</Label>
+                <Switch
+                  checked={formData.isHidden}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, isHidden: checked }))
+                  }
+                />
+              </div>
+
               <div className="flex justify-end gap-2">
                 <Button
                   type="button"
@@ -229,7 +303,7 @@ export default function ProductFormDialog({
                 >
                   <X className="w-4 h-4 mr-1" /> Hủy
                 </Button>
-                <Button type="submit">
+                <Button type="submit" disabled={isSubmitDisabled}>
                   <Save className="w-4 h-4 mr-1" /> Lưu
                 </Button>
               </div>
@@ -238,11 +312,7 @@ export default function ProductFormDialog({
         </DialogContent>
       </Dialog>
 
-      {/* === MODAL CHỌN ẢNH === */}
-      <Dialog
-        open={isSelectImageOpen}
-        onOpenChange={setIsSelectImageOpen}
-      >
+      <Dialog open={isSelectImageOpen} onOpenChange={setIsSelectImageOpen}>
         <DialogContent className="max-w-2xl sm:max-w-lg md:max-w-2xl flex flex-col">
           <DialogHeader>
             <DialogTitle>Chọn ảnh</DialogTitle>
@@ -255,6 +325,7 @@ export default function ProductFormDialog({
                 onClick={() => {
                   setFormData((prev) => ({ ...prev, imageUrl: img.url }))
                   setIsSelectImageOpen(false)
+                  setErrors((prev) => ({ ...prev, imageUrl: "" }))
                 }}
               >
                 <Image
