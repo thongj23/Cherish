@@ -11,6 +11,7 @@ export interface Product {
   featured?: boolean
   quantity?: number
   size?: number
-  isHidden?: boolean
+ status?: ProductStatus;
   link?: string
 }
+export type ProductStatus = 'active' | 'inactive' | 'disabled';

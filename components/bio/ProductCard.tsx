@@ -26,27 +26,26 @@ export default function ProductCard({
     return () => window.removeEventListener("keydown", handleEsc)
   }, [])
 
-  // Chỉ render nếu isHidden là true hoặc undefined
-  if (product.isHidden === false) {
-    return null
-  }
+  const isInactive = product.status === "inactive"
 
   return (
     <>
       {/* CARD */}
       <Card
-        className={`overflow-hidden transition-all hover:scale-105 hover:shadow-xl ${
-          index % 2 === 0
-            ? "bg-white/95 backdrop-blur-md text-gray-800 border-purple-200 shadow-lg"
-            : "bg-gradient-to-r from-purple-100 to-pink-100 backdrop-blur-md text-gray-800 border-purple-300 shadow-lg"
-        }`}
+        className={`overflow-hidden transition-all hover:scale-105 hover:shadow-xl
+          ${
+            index % 2 === 0
+              ? "bg-white/95 backdrop-blur-md text-gray-800 border-purple-200 shadow-lg"
+              : "bg-gradient-to-r from-purple-100 to-pink-100 backdrop-blur-md text-gray-800 border-purple-300 shadow-lg"
+          }
+          ${isInactive ? "opacity-50 grayscale" : ""}
+        `}
       >
         <CardContent className="p-0">
           <div className="flex items-center">
             {/* Image */}
             <div
               onClick={() => {
-                console.log("Image clicked, opening modal")
                 if (product.imageUrl && product.imageUrl !== "/placeholder.svg") {
                   setIsOpen(true)
                 }
@@ -68,7 +67,7 @@ export default function ProductCard({
             {/* Info */}
             <Link
               href={product.link || "#"}
-              className={`flex-1 ${!product.link ? "pointer-events-none" : ""}`}
+              className={`flex-1 ${!product.link || isInactive ? "pointer-events-none" : ""}`}
               aria-label={`View details for ${product.name}`}
             >
               <div className="flex-1 p-3 sm:p-4">
@@ -95,17 +94,17 @@ export default function ProductCard({
                           {product.category}
                         </Badge>
                       )}
-                      {product.isHidden && (
+                      {isInactive && (
                         <Badge
-                          variant="destructive"
-                          className="text-xs px-1 sm:px-2 py-0"
+                          variant="outline"
+                          className="text-xs px-1 sm:px-2 py-0 border-gray-400 text-gray-600 bg-white/70"
                         >
-                          Ẩn
+                          Hết Hàng
                         </Badge>
                       )}
                     </div>
                   </div>
-                  {product.link && (
+                  {product.link && !isInactive && (
                     <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 ml-2 text-purple-500 flex-shrink-0" />
                   )}
                 </div>
@@ -115,7 +114,7 @@ export default function ProductCard({
         </CardContent>
       </Card>
 
-      {/* MODAL - Xem ảnh lớn */}
+      {/* MODAL */}
       <AnimatePresence>
         {isOpen && (
           <motion.div

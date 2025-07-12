@@ -16,36 +16,39 @@ export default function BioPage() {
     fetchProducts()
   }, [])
 
-  const fetchProducts = async () => {
-    try {
-      const productsCollection = collection(db, "products")
-      const snapshot = await getDocs(productsCollection)
-      
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Product[]
+ const fetchProducts = async () => {
+  try {
+    const productsCollection = collection(db, "products")
+    const snapshot = await getDocs(productsCollection)
 
-      // 👉 Lọc các sp không bị ẩn: isHidden !== true
-      const visibleProducts = data.filter((p) => !p.isHidden)
+    const data = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Product[]
 
-      setProducts(visibleProducts)
-    } catch (error) {
-      console.error(error)
-      setError("Không thể tải sản phẩm. Hiển thị dữ liệu mẫu.")
-      setProducts([
-        {
-          id: "1",
-          name: "Dép mẫu 1",
-          description: "Mẫu fallback",
-          imageUrl: "/placeholder.svg",
-          price: 100000,
-        },
-      ])
-    } finally {
-      setLoading(false)
-    }
+    // ✅ Lọc sp: chỉ lấy status active | inactive
+    const visibleProducts = data.filter(
+      (p) => p.status === "active" || p.status === "inactive"
+    )
+
+    setProducts(visibleProducts)
+  } catch (error) {
+    console.error(error)
+    setError("Không thể tải sản phẩm. Hiển thị dữ liệu mẫu.")
+    setProducts([
+      {
+        id: "1",
+        name: "Dép mẫu 1",
+        description: "Mẫu fallback",
+        imageUrl: "/placeholder.svg",
+        price: 100000,
+      },
+    ])
+  } finally {
+    setLoading(false)
   }
+}
+
 
   return (
     <div className="relative min-h-screen overflow-hidden">

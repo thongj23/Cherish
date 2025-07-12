@@ -12,16 +12,23 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Edit, Trash2, Eye, EyeOff, Search } from "lucide-react"
+import { Edit, Trash2, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Product } from "@/types/product/product"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select"
+import { Product, ProductStatus } from "@/types/product/product"
 
 interface ProductTableProps {
   products: Product[]
   loading: boolean
   handleEdit: (product: Product | null) => void
   handleDelete: (id: string) => void
-  handleToggleHidden: (id: string, isHidden: boolean) => void
+  handleChangeStatus: (id: string, status: ProductStatus) => void
 }
 
 export default function ProductTable({
@@ -29,7 +36,7 @@ export default function ProductTable({
   loading,
   handleEdit,
   handleDelete,
-  handleToggleHidden,
+  handleChangeStatus,
 }: ProductTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
 
@@ -39,6 +46,19 @@ export default function ProductTable({
       p.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [products, searchTerm])
+
+  const renderStatusBadge = (status: ProductStatus | undefined) => {
+    switch (status) {
+      case "active":
+        return <Badge variant="default">Còn hàng</Badge>
+      case "inactive":
+        return <Badge variant="secondary">Hết hàng</Badge>
+      case "disabled":
+        return <Badge variant="destructive">Ẩn</Badge>
+      default:
+        return <Badge variant="secondary">Hết hàng</Badge>
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -69,7 +89,7 @@ export default function ProductTable({
                   <TableHead>Giá</TableHead>
                   <TableHead>SL</TableHead>
                   <TableHead>Trạng thái</TableHead>
-                  <TableHead>Ẩn</TableHead>
+                  <TableHead>Chọn trạng thái</TableHead>
                   <TableHead>Hành động</TableHead>
                 </TableRow>
               </TableHeader>
@@ -77,7 +97,9 @@ export default function ProductTable({
                 {filteredProducts.map((p) => (
                   <TableRow
                     key={p.id}
-                    className="hover:bg-muted/50 transition-colors"
+                    className={`hover:bg-muted/50 transition-colors ${
+                      p.status === "inactive" ? "opacity-50" : ""
+                    }`}
                   >
                     <TableCell>
                       <Image
@@ -95,13 +117,23 @@ export default function ProductTable({
                     <TableCell>{p.category}</TableCell>
                     <TableCell>{p.price}</TableCell>
                     <TableCell>{p.quantity}</TableCell>
+                    <TableCell>{renderStatusBadge(p.status)}</TableCell>
                     <TableCell>
-                      {p.featured && <Badge className="mr-2">Nổi bật</Badge>}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={p.isHidden ? "destructive" : "default"}>
-                        {p.isHidden ? "Ẩn" : "Hiện"}
-                      </Badge>
+                      <Select
+                        value={p.status}
+                        onValueChange={(value) =>
+                          handleChangeStatus(p.id, value as ProductStatus)
+                        }
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Còn hàng</SelectItem>
+                          <SelectItem value="inactive">Hết hàng</SelectItem>
+                          <SelectItem value="disabled">Ẩn</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell className="flex gap-2">
                       <Button
@@ -118,17 +150,6 @@ export default function ProductTable({
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
-                      <Button
-                        size="icon"
-                        variant={p.isHidden ? "outline" : "secondary"}
-                        onClick={() => handleToggleHidden(p.id, !p.isHidden)}
-                      >
-                        {p.isHidden ? (
-                          <Eye className="w-4 h-4" />
-                        ) : (
-                          <EyeOff className="w-4 h-4" />
-                        )}
-                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -141,7 +162,9 @@ export default function ProductTable({
             {filteredProducts.map((p) => (
               <div
                 key={p.id}
-                className="border rounded-lg p-4 shadow-sm hover:shadow transition"
+                className={`border rounded-lg p-4 shadow-sm hover:shadow transition ${
+                  p.status === "inactive" ? "opacity-50" : ""
+                }`}
               >
                 <div className="flex items-center gap-4 mb-2">
                   <Image
@@ -162,15 +185,24 @@ export default function ProductTable({
                 <div className="text-sm">
                   <p>Giá: {p.price}</p>
                   <p>Số lượng: {p.quantity}</p>
-                  <p>
-                    {p.featured && <Badge className="mt-1 mr-2">Nổi bật</Badge>}
-                    <Badge
-                      className="mt-1"
-                      variant={p.isHidden ? "destructive" : "default"}
+                  <div className="mt-1">{renderStatusBadge(p.status)}</div>
+                  <div className="mt-2">
+                    <Select
+                      value={p.status}
+                      onValueChange={(value) =>
+                        handleChangeStatus(p.id, value as ProductStatus)
+                      }
                     >
-                      {p.isHidden ? "Ẩn" : "Hiện"}
-                    </Badge>
-                  </p>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Chọn trạng thái" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Còn hàng</SelectItem>
+                        <SelectItem value="inactive">Hết hàng</SelectItem>
+                        <SelectItem value="disabled">Ẩn</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="flex gap-2 mt-2">
                   <Button size="sm" onClick={() => handleEdit(p)}>
@@ -182,18 +214,6 @@ export default function ProductTable({
                     onClick={() => handleDelete(p.id)}
                   >
                     <Trash2 className="w-4 h-4 mr-1" /> Xóa
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={p.isHidden ? "outline" : "secondary"}
-                    onClick={() => handleToggleHidden(p.id, !p.isHidden)}
-                  >
-                    {p.isHidden ? (
-                      <Eye className="w-4 h-4 mr-1" />
-                    ) : (
-                      <EyeOff className="w-4 h-4 mr-1" />
-                    )}
-                    {p.isHidden ? "Hiện" : "Ẩn"}
                   </Button>
                 </div>
               </div>

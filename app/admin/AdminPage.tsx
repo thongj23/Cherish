@@ -29,7 +29,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
     selectedImages,
     setSelectedImages,
     openImageModal,
-    handleToggleHidden,
+    handleChangeStatus,
   } = useAdminProducts()
 
   return (
@@ -66,7 +66,7 @@ export default function AdminPage({ onLogout }: AdminPageProps) {
           loading={loading}
           handleEdit={handleEdit}
           handleDelete={handleDelete}
-           handleToggleHidden={handleToggleHidden} 
+          handleChangeStatus={handleChangeStatus}
         />
 
         <ProductFormDialog
