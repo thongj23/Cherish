@@ -52,7 +52,7 @@ export default function ProductTable({
       case "active":
         return <Badge variant="default">Còn hàng</Badge>
       case "inactive":
-        return <Badge variant="secondary">Hết hàng</Badge>
+        return <Badge variant="secondary">Tạm hết hàng</Badge>
       case "disabled":
         return <Badge variant="destructive">Ẩn</Badge>
       default:
@@ -130,7 +130,7 @@ export default function ProductTable({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="active">Còn hàng</SelectItem>
-                          <SelectItem value="inactive">Hết hàng</SelectItem>
+                          <SelectItem value="inactive">Tạm hết hàng</SelectItem>
                           <SelectItem value="disabled">Ẩn</SelectItem>
                         </SelectContent>
                       </Select>
@@ -198,7 +198,7 @@ export default function ProductTable({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="active">Còn hàng</SelectItem>
-                        <SelectItem value="inactive">Hết hàng</SelectItem>
+                        <SelectItem value="inactive">Tạm hết hàng</SelectItem>
                         <SelectItem value="disabled">Ẩn</SelectItem>
                       </SelectContent>
                     </Select>

@@ -99,7 +99,7 @@ export default function ProductCard({
                           variant="outline"
                           className="text-xs px-1 sm:px-2 py-0 border-gray-400 text-gray-600 bg-white/70"
                         >
-                          Hết Hàng
+                          Tạm hết hàng
                         </Badge>
                       )}
                     </div>
