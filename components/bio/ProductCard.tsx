@@ -9,6 +9,24 @@ import { Card, CardContent } from "@/components/ui/card"
 import { motion, AnimatePresence } from "framer-motion"
 import { Product } from "@/types/product/product"
 
+const placeholderBase64 = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjZTBlMGUwIi8+PC9zdmc+"
+
+const getCloudinaryThumbnail = (url: string, w: number, h: number) => {
+  if (!url || !url.includes("/upload/")) return placeholderBase64;
+  return url.replace(
+    "/upload/",
+    `/upload/w_${w},h_${h},c_scale,q_25,f_webp,dpr_auto/`
+  );
+};
+
+const getCloudinaryModalImage = (url: string, w: number, h: number) => {
+  if (!url || !url.includes("/upload/")) return placeholderBase64;
+  return url.replace(
+    "/upload/",
+    `/upload/w_${w},h_${h},c_scale,q_50,f_webp,dpr_auto/`
+  );
+};
+
 export default function ProductCard({
   product,
   index,
@@ -17,6 +35,7 @@ export default function ProductCard({
   index: number
 }) {
   const [isOpen, setIsOpen] = useState(false)
+  const sanitizedImageUrl = product.imageUrl && product.imageUrl.includes("/upload/") ? product.imageUrl : placeholderBase64;
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -46,21 +65,24 @@ export default function ProductCard({
             {/* Image */}
             <div
               onClick={() => {
-                if (product.imageUrl && product.imageUrl !== "/placeholder.svg") {
+                if (sanitizedImageUrl !== placeholderBase64) {
                   setIsOpen(true)
                 }
               }}
-              className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 flex-shrink-0 cursor-zoom-in"
+              className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex-shrink-0 cursor-zoom-in"
               role="button"
               aria-label={`Enlarge image of ${product.name}`}
             >
               <Image
-                src={product.imageUrl || "/placeholder.svg"}
+                src={getCloudinaryThumbnail(sanitizedImageUrl, 48, 48)}
                 alt={product.name}
-                width={96}
-                height={96}
+                width={48}
+                height={48}
+                loading="lazy"
+                placeholder="blur"
+                blurDataURL={placeholderBase64}
                 className="w-full h-full object-cover rounded-l-lg"
-                onError={(e) => (e.currentTarget.src = "/placeholder.svg")}
+                onError={(e) => (e.currentTarget.src = placeholderBase64)}
               />
             </div>
 
@@ -143,12 +165,15 @@ export default function ProductCard({
                 <X size={24} />
               </button>
               <Image
-                src={product.imageUrl || "/placeholder.svg"}
+                src={getCloudinaryModalImage(sanitizedImageUrl, 800, 600)}
                 alt={product.name}
-                width={1200}
-                height={800}
+                width={800}
+                height={600}
+                loading="lazy"
+                placeholder="blur"
+                blurDataURL={getCloudinaryThumbnail(sanitizedImageUrl, 20, 20)}
                 className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
-                onError={(e) => (e.currentTarget.src = "/placeholder.svg")}
+                onError={(e) => (e.currentTarget.src = placeholderBase64)}
               />
             </motion.div>
           </motion.div>
