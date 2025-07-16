@@ -39,13 +39,22 @@ export default function ProductTable({
   handleChangeStatus,
 }: ProductTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("all")
 
+  // Lấy danh sách category duy nhất
+  const categories = useMemo(() => {
+    const allCategories = products.map((p) => p.category).filter(Boolean)
+    return ["all", ...Array.from(new Set(allCategories))]
+  }, [products])
+
+  // Lọc sản phẩm theo tên và danh mục
   const filteredProducts = useMemo(() => {
-    if (!searchTerm.trim()) return products
-    return products.filter((p) =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }, [products, searchTerm])
+    return products.filter((p) => {
+      const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchCategory = selectedCategory === "all" || p.category === selectedCategory
+      return matchSearch && matchCategory
+    })
+  }, [products, searchTerm, selectedCategory])
 
   const renderStatusBadge = (status: ProductStatus | undefined) => {
     switch (status) {
@@ -62,16 +71,34 @@ export default function ProductTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Search className="w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Tìm kiếm sản phẩm..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full max-w-xs"
-        />
+      {/* Thanh tìm kiếm và lọc */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex items-center gap-2">
+          <Search className="w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Tìm kiếm sản phẩm..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full max-w-xs"
+          />
+        </div>
+
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Chọn danh mục" />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((c) => (
+          <SelectItem key={c} value={c ?? ""}>
+
+                {c === "all" ? "Tất cả" : c}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
+      {/* Loading / Không tìm thấy */}
       {loading ? (
         <p className="text-center">Đang tải...</p>
       ) : filteredProducts.length === 0 ? (
