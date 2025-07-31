@@ -1,11 +1,18 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import AdminPage from "./AdminPage"
+// import AdminNav from "@/components/adminPage/AdminNav"
 
-export default function AdminWrapper() {
+interface AdminWrapperProps {
+  children: React.ReactNode
+}
+
+export default function AdminWrapper({ children }: AdminWrapperProps) {
   const [password, setPassword] = useState("")
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -43,33 +50,33 @@ export default function AdminWrapper() {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("isAdminLoggedIn")
-    setIsAuthenticated(false)
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow-md w-full max-w-sm space-y-4">
+          <h1 className="text-xl font-bold text-center">Nhập mật khẩu quản trị</h1>
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Mật khẩu"
+            required
+          />
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Đang kiểm tra..." : "Xác nhận"}
+          </Button>
+        </form>
+      </div>
+    )
   }
 
-  if (isAuthenticated) {
-    return <AdminPage onLogout={handleLogout} />
-  }
-
+  // ✅ Nếu đã đăng nhập thành công thì render children với AdminNav
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-8 rounded shadow-md w-full max-w-sm space-y-4"
-      >
-        <h1 className="text-xl font-bold">Nhập mật khẩu để vào trang quản trị</h1>
-        <Input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Mật khẩu"
-          required
-        />
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Đang kiểm tra..." : "Xác nhận"}
-        </Button>
-      </form>
+    <div className="min-h-screen bg-gray-50">
+      {/* <AdminNav /> */}
+      <main className="p-4">
+        <AdminPage />
+      </main>
     </div>
   )
 }

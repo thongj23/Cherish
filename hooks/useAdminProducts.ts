@@ -15,39 +15,81 @@ export default function useAdminProducts() {
   const [selectedImages, setSelectedImages] = useState<string[]>([])
 
   const fetchProducts = useCallback(async () => {
-    setLoading(true)
-    const snapshot = await getDocs(collection(db, "products"))
-    const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Product[]
-    setProducts(data)
-    setLoading(false)
+    try {
+      setLoading(true)
+      console.log("🔄 Fetching products from Firestore...")
+
+      const snapshot = await getDocs(collection(db, "products"))
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Product[]
+
+      console.log("📦 Products fetched:", data.length, data)
+      setProducts(data)
+    } catch (error) {
+      console.error("❌ Error fetching products:", error)
+      setProducts([])
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => {
-    fetchProducts()
+    // Only fetch if user is authenticated
+    const isLoggedIn = localStorage.getItem("isAdminLoggedIn")
+    if (isLoggedIn === "true") {
+      fetchProducts()
+    }
   }, [fetchProducts])
 
   const handleSubmit = async (formData: ProductFormData) => {
-    const data = {
-      name: formData.name,
-      description: formData.description,
-      imageUrl: formData.imageUrl,
-      price: formData.price ? parseFloat(formData.price) : undefined,
-      category: formData.category || undefined,
-      featured: formData.featured,
-      quantity: formData.quantity ? parseInt(formData.quantity) : undefined,
-      size: formData.size || 0,
-      updatedAt: new Date(),
-    }
+    try {
+      // ✅ Prepare data and handle undefined/empty values properly
+      const data: any = {
+        name: formData.name,
+        description: formData.description,
+        imageUrl: formData.imageUrl,
+        price: formData.price ? Number.parseFloat(formData.price) : 0,
+        category: formData.category,
+        featured: formData.featured,
+        quantity: formData.quantity ? Number.parseInt(formData.quantity) : 0,
+        size: formData.size || 0,
+        status: formData.isHidden ? "disabled" : "active",
+        updatedAt: new Date(),
+      }
 
-    if (editingProduct) {
-      await updateDoc(doc(db, "products", editingProduct.id), data)
-    } else {
-      await addDoc(collection(db, "products"), { ...data, createdAt: new Date() })
-    }
+      // ✅ Only add subCategory if it has a value, otherwise remove it from the document
+      if (formData.subCategory && formData.subCategory.trim() !== "") {
+        data.subCategory = formData.subCategory
+      } else {
+        // For updates, we need to explicitly remove the field
+        if (editingProduct) {
+          data.subCategory = null // This will remove the field in Firestore
+        }
+        // For new products, we simply don't include the field
+      }
 
-    setIsDialogOpen(false)
-    setEditingProduct(null)
-    fetchProducts()
+      console.log("💾 Saving product data:", data)
+
+      if (editingProduct) {
+        await updateDoc(doc(db, "products", editingProduct.id), data)
+        console.log("✅ Product updated:", editingProduct.id)
+      } else {
+        await addDoc(collection(db, "products"), {
+          ...data,
+          createdAt: new Date(),
+        })
+        console.log("✅ Product added")
+      }
+
+      setIsDialogOpen(false)
+      setEditingProduct(null)
+      fetchProducts() // Refresh the list
+    } catch (error) {
+      console.error("❌ Error saving product:", error)
+      alert("Lỗi khi lưu sản phẩm!")
+    }
   }
 
   const handleEdit = (product: Product | null) => {
@@ -56,9 +98,28 @@ export default function useAdminProducts() {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm("Bạn có chắc xóa?")) {
-      await deleteDoc(doc(db, "products", id))
-      fetchProducts()
+    if (confirm("Bạn có chắc xóa sản phẩm này?")) {
+      try {
+        await deleteDoc(doc(db, "products", id))
+        console.log("✅ Product deleted:", id)
+        fetchProducts() // Refresh the list
+      } catch (error) {
+        console.error("❌ Error deleting product:", error)
+        alert("Lỗi khi xóa sản phẩm!")
+      }
+    }
+  }
+
+  const handleChangeStatus = async (id: string, status: ProductStatus) => {
+    try {
+      await updateDoc(doc(db, "products", id), { status })
+      console.log("✅ Status updated:", id, status)
+
+      // Update local state immediately
+      setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)))
+    } catch (error) {
+      console.error("❌ Error updating status:", error)
+      alert("Lỗi khi cập nhật trạng thái!")
     }
   }
 
@@ -66,18 +127,6 @@ export default function useAdminProducts() {
     setSelectedImages(products.map((p) => p.imageUrl))
     setIsImageModalOpen(true)
   }
-
-const handleChangeStatus = async (id: string, status: ProductStatus) => {
-  // Nếu lưu trên Firestore thì:
-  await updateDoc(doc(db, "products", id), { status })
-  // Cập nhật state local luôn:
-  setProducts(prev =>
-    prev.map(p =>
-      p.id === id ? { ...p, status } : p
-    )
-  )
-}
-
 
   return {
     products,

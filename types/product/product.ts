@@ -1,6 +1,4 @@
 // bio/types.ts
-
-
 export interface Product {
   id: string
   name: string
@@ -8,10 +6,12 @@ export interface Product {
   imageUrl: string
   price?: number
   category?: string
+  subCategory?: string // Added for Charm subcategories
   featured?: boolean
   quantity?: number
   size?: number
- status?: ProductStatus;
+  status?: ProductStatus
   link?: string
 }
-export type ProductStatus = 'active' | 'inactive' | 'disabled';
+
+export type ProductStatus = "active" | "inactive" | "disabled"

@@ -1,21 +1,12 @@
 "use client"
 
-import { X, Save, Image as ImageIcon } from "lucide-react"
+import type React from "react"
+
+import { X, Save, ImageIcon } from "lucide-react"
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -29,6 +20,7 @@ export interface ProductFormData {
   imageUrl: string
   price: string
   category: string
+  subCategory: string
   featured: boolean
   quantity: string
   size: number
@@ -42,6 +34,7 @@ type ProductFormErrors = {
   imageUrl?: string
   price?: string
   category?: string
+  subCategory?: string
   featured?: string
   quantity?: string
   size?: string
@@ -55,18 +48,14 @@ interface ProductFormDialogProps {
   onSubmit: (formData: ProductFormData) => void
 }
 
-export default function ProductFormDialog({
-  open,
-  onOpenChange,
-  initialData,
-  onSubmit,
-}: ProductFormDialogProps) {
+export default function ProductFormDialog({ open, onOpenChange, initialData, onSubmit }: ProductFormDialogProps) {
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
     description: "",
     imageUrl: "",
     price: "",
     category: "",
+    subCategory: "",
     featured: false,
     quantity: "",
     size: 0,
@@ -77,10 +66,30 @@ export default function ProductFormDialog({
   const [isSelectImageOpen, setIsSelectImageOpen] = useState(false)
   const images = useImages()
 
+  // Categories with subcategories
+  const categoryOptions = [
+    { value: "Dep", label: "Dép", subCategories: [] },
+    { value: "Classic", label: "Classic", subCategories: [] },
+    { value: "Collab", label: "Collab", subCategories: [] },
+    {
+      value: "Charm",
+      label: "Charm",
+      subCategories: [
+        { value: "con-vat", label: "Con vật" },
+        { value: "hello-kitty", label: "Hello Kitty" },
+        { value: "khac", label: "Khác" },
+      ],
+    },
+  ]
+
+  const selectedCategoryData = categoryOptions.find((cat) => cat.value === formData.category)
+  const showSubCategory = selectedCategoryData && selectedCategoryData.subCategories.length > 0
+
   useEffect(() => {
     if (initialData) {
       setFormData({
         ...initialData,
+        subCategory: initialData.subCategory || "",
         isHidden: initialData.isHidden ?? false,
       })
       setErrors({})
@@ -91,6 +100,7 @@ export default function ProductFormDialog({
         imageUrl: "",
         price: "",
         category: "",
+        subCategory: "",
         featured: false,
         quantity: "",
         size: 0,
@@ -100,9 +110,7 @@ export default function ProductFormDialog({
     }
   }, [initialData, open])
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
@@ -111,14 +119,27 @@ export default function ProductFormDialog({
     setErrors((prev) => ({ ...prev, [name]: "" }))
   }
 
+  const handleCategoryChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      category: value,
+      subCategory: "", // ✅ Reset subcategory when category changes
+    }))
+    setErrors((prev) => ({ ...prev, category: "", subCategory: "" }))
+  }
+
   const validateForm = () => {
     const newErrors: ProductFormErrors = {}
     if (!formData.name.trim()) newErrors.name = "Tên sản phẩm không được để trống"
     if (!formData.imageUrl) newErrors.imageUrl = "Hình ảnh không được để trống"
     if (!formData.price.trim()) newErrors.price = "Giá không được để trống"
     if (!formData.category) newErrors.category = "Danh mục không được để trống"
+    if (showSubCategory && !formData.subCategory) {
+      newErrors.subCategory = "Danh mục phụ không được để trống"
+    }
     if (!formData.quantity.trim()) newErrors.quantity = "Số lượng không được để trống"
     if (formData.size === 0) newErrors.size = "Size không được để trống"
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -126,7 +147,14 @@ export default function ProductFormDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (validateForm()) {
-      onSubmit(formData)
+      // ✅ Clean the form data before submitting
+      const cleanedFormData = {
+        ...formData,
+        // Ensure subCategory is empty string instead of undefined for non-Charm categories
+        subCategory: showSubCategory ? formData.subCategory : "",
+      }
+      console.log("📝 Form data being submitted:", cleanedFormData)
+      onSubmit(cleanedFormData)
     }
   }
 
@@ -135,6 +163,7 @@ export default function ProductFormDialog({
     !formData.imageUrl ||
     !formData.price.trim() ||
     !formData.category ||
+    (showSubCategory && !formData.subCategory) ||
     !formData.quantity.trim() ||
     formData.size === 0
 
@@ -143,40 +172,44 @@ export default function ProductFormDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg sm:max-w-md md:max-w-lg flex flex-col max-h-[90vh] sm:max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-lg font-semibold">
               {initialData ? "Sửa sản phẩm" : "Thêm sản phẩm"}
             </DialogTitle>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-1">
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Product Name */}
               <div>
-                <Label>Tên sản phẩm</Label>
+                <Label className="text-sm font-medium">Tên sản phẩm *</Label>
                 <Input
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="w-full"
+                  className="w-full mt-1"
+                  placeholder="Nhập tên sản phẩm"
                 />
-                {errors.name && (
-                  <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-                )}
+                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
               </div>
 
+              {/* Description */}
               <div>
-                <Label>Mô tả</Label>
+                <Label className="text-sm font-medium">Mô tả</Label>
                 <Textarea
                   name="description"
                   value={formData.description}
                   onChange={handleChange}
-                  className="w-full"
+                  className="w-full mt-1"
+                  placeholder="Nhập mô tả sản phẩm"
+                  rows={3}
                 />
               </div>
 
+              {/* Image */}
               <div>
-                <Label>Hình ảnh</Label>
-                <div className="flex gap-2">
+                <Label className="text-sm font-medium">Hình ảnh *</Label>
+                <div className="flex gap-2 mt-1">
                   <Input
                     disabled
                     name="imageUrl"
@@ -184,126 +217,135 @@ export default function ProductFormDialog({
                     className="flex-1"
                     placeholder="Chọn từ thư viện..."
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsSelectImageOpen(true)}
-                  >
-                    <ImageIcon className="w-4 h-4 mr-1" /> Chọn ảnh
+                  <Button type="button" variant="outline" onClick={() => setIsSelectImageOpen(true)} className="px-3">
+                    <ImageIcon className="w-4 h-4 mr-1" /> Chọn
                   </Button>
                 </div>
-                {errors.imageUrl && (
-                  <p className="text-red-500 text-xs mt-1">{errors.imageUrl}</p>
-                )}
+                {errors.imageUrl && <p className="text-red-500 text-xs mt-1">{errors.imageUrl}</p>}
                 {formData.imageUrl && (
                   <div className="mt-2">
-                    <Image
-                      src={formData.imageUrl}
-                      alt="Preview"
-                      width={120}
-                      height={120}
-                      className="rounded border"
-                    />
+                    <div className="relative w-24 h-24 rounded-lg overflow-hidden border">
+                      <Image
+                        src={formData.imageUrl || "/placeholder.svg"}
+                        alt="Preview"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
                   </div>
                 )}
               </div>
 
-              <div>
-                <Label>Giá</Label>
-                <Input
-                  name="price"
-                  value={formData.price}
-                  onChange={handleChange}
-                  required
-                  className="w-full"
-                />
-                {errors.price && (
-                  <p className="text-red-500 text-xs mt-1">{errors.price}</p>
-                )}
+              {/* Price and Quantity Row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm font-medium">Giá *</Label>
+                  <Input
+                    name="price"
+                    value={formData.price}
+                    onChange={handleChange}
+                    required
+                    className="w-full mt-1"
+                    placeholder="0"
+                  />
+                  {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Số lượng *</Label>
+                  <Input
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleChange}
+                    required
+                    className="w-full mt-1"
+                    placeholder="0"
+                  />
+                  {errors.quantity && <p className="text-red-500 text-xs mt-1">{errors.quantity}</p>}
+                </div>
               </div>
 
+              {/* Category */}
               <div>
-                <Label>Danh mục</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, category: value }))
-                  }
-                >
-                  <SelectTrigger className="w-full">
+                <Label className="text-sm font-medium">Danh mục *</Label>
+                <Select value={formData.category} onValueChange={handleCategoryChange}>
+                  <SelectTrigger className="w-full mt-1">
                     <SelectValue placeholder="Chọn danh mục" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Dep">Dép</SelectItem>
-                    <SelectItem value="Charm">Charm</SelectItem>
+                    {categoryOptions.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                {errors.category && (
-                  <p className="text-red-500 text-xs mt-1">{errors.category}</p>
-                )}
+                {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
               </div>
 
+              {/* Subcategory - Only show for Charm */}
+              {showSubCategory && (
+                <div>
+                  <Label className="text-sm font-medium">Danh mục phụ *</Label>
+                  <Select
+                    value={formData.subCategory}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, subCategory: value }))}
+                  >
+                    <SelectTrigger className="w-full mt-1">
+                      <SelectValue placeholder="Chọn danh mục phụ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedCategoryData.subCategories.map((subCat) => (
+                        <SelectItem key={subCat.value} value={subCat.value}>
+                          {subCat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.subCategory && <p className="text-red-500 text-xs mt-1">{errors.subCategory}</p>}
+                </div>
+              )}
+
+              {/* Size */}
               <div>
-                <Label>Size</Label>
+                <Label className="text-sm font-medium">Size *</Label>
                 <Input
                   type="number"
                   name="size"
-                  value={formData.size || 0}
+                  value={formData.size || ""}
                   onChange={handleChange}
-                  placeholder="Nhập size (ví dụ: 36, 37...)"
+                  placeholder="VD: 36, 37, 38..."
                   min={30}
                   max={50}
                   required
-                  className="w-full"
+                  className="w-full mt-1"
                 />
-                {errors.size && (
-                  <p className="text-red-500 text-xs mt-1">{errors.size}</p>
-                )}
+                {errors.size && <p className="text-red-500 text-xs mt-1">{errors.size}</p>}
               </div>
 
-              <div>
-                <Label>Số lượng</Label>
-                <Input
-                  name="quantity"
-                  value={formData.quantity}
-                  onChange={handleChange}
-                  required
-                  className="w-full"
-                />
-                {errors.quantity && (
-                  <p className="text-red-500 text-xs mt-1">{errors.quantity}</p>
-                )}
+              {/* Switches */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between p-2 rounded-lg border">
+                  <Label className="text-sm font-medium">Sản phẩm nổi bật</Label>
+                  <Switch
+                    checked={formData.featured}
+                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, featured: checked }))}
+                  />
+                </div>
+                <div className="flex items-center justify-between p-2 rounded-lg border">
+                  <Label className="text-sm font-medium">Ẩn sản phẩm</Label>
+                  <Switch
+                    checked={formData.isHidden}
+                    onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, isHidden: checked }))}
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <Label>Nổi bật</Label>
-                <Switch
-                  checked={formData.featured}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, featured: checked }))
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Label>Ẩn sản phẩm</Label>
-                <Switch
-                  checked={formData.isHidden}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, isHidden: checked }))
-                  }
-                />
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                >
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   <X className="w-4 h-4 mr-1" /> Hủy
                 </Button>
-                <Button type="submit" disabled={isSubmitDisabled}>
+                <Button type="submit" disabled={isSubmitDisabled} className="bg-purple-600 hover:bg-purple-700">
                   <Save className="w-4 h-4 mr-1" /> Lưu
                 </Button>
               </div>
@@ -312,16 +354,17 @@ export default function ProductFormDialog({
         </DialogContent>
       </Dialog>
 
+      {/* Image Selection Dialog */}
       <Dialog open={isSelectImageOpen} onOpenChange={setIsSelectImageOpen}>
         <DialogContent className="max-w-2xl sm:max-w-lg md:max-w-2xl flex flex-col">
           <DialogHeader>
-            <DialogTitle>Chọn ảnh</DialogTitle>
+            <DialogTitle>Chọn ảnh từ thư viện</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[400px] overflow-y-auto">
             {images.map((img, index) => (
               <div
                 key={img.id}
-                className="border rounded cursor-pointer hover:shadow"
+                className="relative aspect-square border rounded-lg cursor-pointer hover:shadow-md transition-shadow overflow-hidden"
                 onClick={() => {
                   setFormData((prev) => ({ ...prev, imageUrl: img.url }))
                   setIsSelectImageOpen(false)
@@ -329,11 +372,10 @@ export default function ProductFormDialog({
                 }}
               >
                 <Image
-                  src={img.url}
+                  src={img.url || "/placeholder.svg"}
                   alt={`Image ${index + 1}`}
-                  width={150}
-                  height={150}
-                  className="object-cover w-full h-full rounded"
+                  fill
+                  className="object-cover hover:scale-105 transition-transform"
                 />
               </div>
             ))}

@@ -1,1 +1,3 @@
-export { default } from "./AdminWrapper";
+import AdminWrapper from "./AdminWrapper"
+
+export default AdminWrapper
