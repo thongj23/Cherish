@@ -53,28 +53,22 @@ export default function ProductGrid({
   const sortedProducts = [...searchFiltered.filter((p) => p.featured), ...searchFiltered.filter((p) => !p.featured)]
 
   const mainTabs = [
+
     {
       key: "Dep" as const,
-      label: "Dép",
-      description: "Dép thời trang",
-      emoji: "👡",
-    },
-    {
-      key: "Classic" as const,
       label: "Classic",
-      description: "Phong cách cổ điển",
-      emoji: "✨",
+    
+  
     },
     {
       key: "Collab" as const,
       label: "Collab",
-      description: "Hợp tác đặc biệt",
       emoji: "🤝",
     },
     {
       key: "Charm" as const,
       label: "Charm",
-      description: "Phụ kiện trang trí",
+
       emoji: "🎀",
     },
   ]
@@ -126,7 +120,7 @@ export default function ProductGrid({
                   activeTab === tab.key ? "text-purple-100" : "text-gray-500 group-hover:text-purple-600"
                 }`}
               >
-                {tab.description}
+                {/* {tab.description} */}
               </span>
             </div>
 
