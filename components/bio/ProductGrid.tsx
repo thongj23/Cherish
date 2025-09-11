@@ -3,6 +3,7 @@
 import { useState } from "react"
 import ProductCard from "./ProductCard"
 import type { Product } from "@/types/product/product"
+import { motion } from "framer-motion"
 
 export default function ProductGrid({
   products,
@@ -23,30 +24,62 @@ export default function ProductGrid({
       </div>
     )
 
-  // 1) Lọc theo category Tab
-  let categoryFiltered = products.filter((p) => p.category?.toLowerCase() === activeTab.toLowerCase())
+  // Helper: normalize Vietnamese accents and slugify
+  const normalize = (s?: string) =>
+    (s ?? "")
+      .toString()
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // strip accents
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+
+  const isConVat = (sub: string) =>
+    sub === "con-vat" || sub === "convat" || sub === "animal" || sub === "animals"
+
+  const isHelloKitty = (sub: string) =>
+    sub === "hello-kitty" || sub === "hellokitty" || sub === "kitty"
+
+  // 1) Lọc theo category Tab (ổn định, chấp nhận biến thể/viết có dấu)
+  const activeKey = normalize(activeTab)
+  const matchesCategory = (p: Product) => {
+    const cat = normalize(p.category)
+    if (activeKey === "charm") return cat === "charm" || cat.includes("charm")
+    if (activeKey === "collab") return cat === "collab" || cat.includes("collab")
+    // Classic/Dép
+    if (activeKey === "dep" || activeKey === "classic") return cat === "dep" || cat === "classic"
+    return cat === activeKey
+  }
+
+  let categoryFiltered = products.filter(matchesCategory)
 
   // 2) Nếu là Charm, lọc thêm theo subcategory
   if (activeTab === "Charm") {
-    categoryFiltered = categoryFiltered.filter((p) => {
-      const subCategory = p.subCategory?.toLowerCase()
+    const onlyCharm = categoryFiltered
+    const filteredBySub = onlyCharm.filter((p) => {
+      const subCategory = normalize(p.subCategory)
       switch (activeCharmSubTab) {
         case "ConVat":
-          return subCategory === "con-vat" || subCategory === "animal"
+          return isConVat(subCategory)
         case "HelloKitty":
-          return subCategory === "hello-kitty" || subCategory === "hellokitty"
+          return isHelloKitty(subCategory)
         case "Khac":
-          return subCategory === "khac" || subCategory === "other" || !subCategory
+          return !isConVat(subCategory) && !isHelloKitty(subCategory)
         default:
           return true
       }
     })
+    // Nếu sub-tab hiện tại không có kết quả, fallback: hiển thị toàn bộ Charm
+    categoryFiltered = filteredBySub.length > 0 ? filteredBySub : onlyCharm
   }
 
   // 3) Lọc theo search term
   const searchFiltered = categoryFiltered.filter((p) => {
-    const lower = searchTerm.toLowerCase()
-    return p.name.toLowerCase().includes(lower) || (p.description && p.description.toLowerCase().includes(lower))
+    const q = normalize(searchTerm)
+    const name = normalize(p.name)
+    const desc = normalize(p.description || "")
+    return name.includes(q) || desc.includes(q)
   })
 
   // 4) Ưu tiên bán chạy
@@ -91,10 +124,31 @@ export default function ProductGrid({
     },
   ]
 
+  const container = {
+    hidden: {},
+    show: {
+      transition: {
+        staggerChildren: 0.06,
+        delayChildren: 0.05,
+      },
+    },
+  }
+
+  const item = {
+    hidden: { opacity: 0, y: 18 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.25 } },
+  }
+
   return (
     <div className="w-full">
       {/* Main Tabs */}
-      <div className="flex justify-center mb-6 flex-wrap gap-3">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.3 }}
+        transition={{ duration: 0.25 }}
+        className="flex justify-center mb-6 flex-wrap gap-3"
+      >
         {mainTabs.map((tab) => (
           <button
             key={tab.key}
@@ -130,11 +184,17 @@ export default function ProductGrid({
             )}
           </button>
         ))}
-      </div>
+      </motion.div>
 
       {/* Charm Sub-tabs */}
       {activeTab === "Charm" && (
-        <div className="flex justify-center mb-6 flex-wrap gap-2">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.2 }}
+          className="flex justify-center mb-6 flex-wrap gap-2"
+        >
           {charmSubTabs.map((subTab) => (
             <button
               key={subTab.key}
@@ -149,11 +209,17 @@ export default function ProductGrid({
               {subTab.label}
             </button>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {/* Search input */}
-      <div className="mb-6 text-center">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.3 }}
+        transition={{ duration: 0.25 }}
+        className="mb-6 text-center"
+      >
         <input
           type="text"
           placeholder={`Tìm kiếm ${activeTab === "Charm" ? `${activeTab} - ${charmSubTabs.find((s) => s.key === activeCharmSubTab)?.label}` : activeTab}...`}
@@ -161,17 +227,25 @@ export default function ProductGrid({
           onChange={(e) => setSearchTerm(e.target.value)}
           className="border border-purple-300 rounded-full px-4 py-2 w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
         />
-      </div>
+      </motion.div>
 
       {/* Kết quả */}
       {sortedProducts.length === 0 ? (
         <div className="text-center text-gray-500 text-sm">Không tìm thấy sản phẩm.</div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 w-full max-w-3xl mx-auto">
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.2 }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 w-full max-w-3xl mx-auto"
+        >
           {sortedProducts.map((p, i) => (
-            <ProductCard key={p.id} product={p} index={i} />
+            <motion.div key={p.id} variants={item}>
+              <ProductCard product={p} index={i} />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   )

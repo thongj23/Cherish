@@ -8,13 +8,22 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    domains: ["firebasestorage.googleapis.com", "images.unsplash.com", "via.placeholder.com"],
-    unoptimized: true,
+    domains: [
+      "firebasestorage.googleapis.com",
+      "images.unsplash.com",
+      "via.placeholder.com",
+      "res.cloudinary.com",
+    ],
+    unoptimized: false,
   },
-  // Enable experimental features for better performance
   experimental: {
     optimizeCss: true,
   },
 }
 
-module.exports = nextConfig
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: true, 
+})
+
+module.exports = withBundleAnalyzer(nextConfig)

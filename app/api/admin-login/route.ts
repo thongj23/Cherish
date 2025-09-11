@@ -3,21 +3,38 @@ import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import bcrypt from "bcryptjs";
 
+function parseFirebasePrivateKey(): string {
+  const rawKey = process.env.FIREBASE_PRIVATE_KEY || "";
+  const b64 = process.env.FIREBASE_PRIVATE_KEY_BASE64 || "";
+
+  let key = (rawKey || "").trim();
+  // Strip surrounding quotes if present
+  key = key.replace(/^"|"$/g, "").replace(/^'|'$/g, "");
+  // Convert escaped newlines to real newlines
+  if (key.includes("\\n")) key = key.replace(/\\n/g, "\n");
+
+  if (!key && b64) {
+    try {
+      key = Buffer.from(b64, "base64").toString("utf8").trim();
+    } catch {
+      // ignore decode errors
+    }
+  }
+
+  if (
+    !key.startsWith("-----BEGIN PRIVATE KEY-----") ||
+    !key.includes("-----END PRIVATE KEY-----")
+  ) {
+    throw new Error("Invalid PEM key format");
+  }
+
+  return key;
+}
+
 function getDbOrThrow() {
   try {
     if (!getApps().length) {
-      const rawKey = process.env.FIREBASE_PRIVATE_KEY || "";
-      const parsedKey = rawKey
-        .replace(/^\"|\"$/g, "")
-        .replace(/\\n/g, "\n")
-        .trim();
-
-      if (
-        !parsedKey.startsWith("-----BEGIN PRIVATE KEY-----") ||
-        !parsedKey.endsWith("-----END PRIVATE KEY-----")
-      ) {
-        throw new Error("Invalid PEM key format");
-      }
+      const parsedKey = parseFirebasePrivateKey();
 
       initializeApp({
         credential: cert({

@@ -13,12 +13,14 @@
     "typecheck": "tsc -p tsconfig.ci.json --noEmit",
     "test": "npm run typecheck",
     "test:ci": "npm run typecheck",
+    "setup:firebase-admin": "node scripts/configure-firebase-admin.mjs",
     "prepare": "husky",
     "start": "next start",
     "format": "prettier --write ."
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
+    "@next/bundle-analyzer": "^15.5.3",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
     "@radix-ui/react-aspect-ratio": "1.1.1",
