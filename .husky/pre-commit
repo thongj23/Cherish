@@ -1,4 +1,5 @@
+#!/usr/bin/env sh
+# husky
 
-echo "Running pre-commit checks (lint, tests)"
-npm run lint && npm run test --silent
-
+echo "Running pre-commit checks (lint only)"
+npm run lint

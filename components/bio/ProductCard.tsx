@@ -11,12 +11,9 @@ import { Product } from "@/types/product/product"
 
 const placeholder = "/placeholder.svg"
 
-const getCloudinaryThumbnail = (url: string, w: number, h: number) => {
-  if (!url || !url.includes("/upload/")) return placeholder
-  return url.replace(
-    "/upload/",
-    `/upload/w_${w},h_${h},c_fill,q_auto,f_auto/`
-  )
+// Prefer original URL; let Next/Image optimize and avoid upscaling artifacts.
+const getThumbnailSrc = (url: string) => {
+  return url && url.trim().length > 0 ? url : placeholder
 }
 
 export default function ProductCard({
@@ -37,7 +34,7 @@ export default function ProductCard({
   }, [])
 
   const isInactive = product.status === "inactive"
-  const thumbnailUrl = getCloudinaryThumbnail(product.imageUrl || "", 100, 100)
+  const thumbnailUrl = getThumbnailSrc(product.imageUrl || "")
   const modalUrl = product.imageUrl || placeholder
 
   return (
@@ -67,8 +64,10 @@ export default function ProductCard({
                 alt={product.name}
                 width={96}
                 height={96}
+                sizes="(min-width: 1024px) 6rem, (min-width: 640px) 5rem, 4rem"
                 className="w-full h-full object-cover"
                 loading="lazy"
+                quality={85}
                 placeholder="blur"
                 blurDataURL={placeholder}
               />
@@ -157,7 +156,10 @@ export default function ProductCard({
                 alt={product.name}
                 width={1200}
                 height={800}
+                sizes="100vw"
                 className="w-full h-auto max-h-[80vh] object-contain rounded-xl shadow-2xl"
+                quality={90}
+                priority={false}
               />
             </motion.div>
           </motion.div>
