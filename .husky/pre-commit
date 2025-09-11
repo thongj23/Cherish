@@ -1,0 +1,4 @@
+
+echo "Running pre-commit checks (lint, tests)"
+npm run lint && npm run test --silent
+
