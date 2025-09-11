@@ -3,7 +3,15 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ReceiptText, Home, ShoppingCart, LogOut } from "lucide-react"
+import { ReceiptText, Home, ShoppingCart, LogOut, QrCode, FilePlus } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 export default function AdminNav() {
@@ -22,8 +30,8 @@ export default function AdminNav() {
           {/* Trang chủ */}
           <Link href="/admin">
             <Button
-              variant={pathname === "/" ? "default" : "outline"}
-              className={cn("transition-all", pathname === "/" && "font-semibold")}
+              variant={pathname === "/admin" ? "default" : "outline"}
+              className={cn("transition-all", pathname === "/admin" && "font-semibold")}
             >
               <Home className="w-4 h-4 mr-2" />
               Trang chủ
@@ -41,16 +49,39 @@ export default function AdminNav() {
             </Button>
           </Link>
 
-          {/* Đặt hàng */}
-          <Link href="/admin/order">
-            <Button
-              variant={pathname.startsWith("/admin/order") ? "default" : "outline"}
-              className={cn("transition-all", pathname.startsWith("/admin/order") && "font-semibold")}
-            >
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              Đặt hàng
-            </Button>
-          </Link>
+          {/* Đơn hàng (gom nhóm) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant={
+                  pathname.startsWith("/admin/order") ||
+                  pathname.startsWith("/order") ||
+                  pathname.startsWith("/scan")
+                    ? "default"
+                    : "outline"
+                }
+                className="transition-all"
+              >
+                <ShoppingCart className="w-4 h-4 mr-2" /> Đơn hàng
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuLabel>Đơn hàng</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); router.push("/admin/order") }}>
+                <ShoppingCart className="w-4 h-4" />
+                <span>Quản lý đơn</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); router.push("/order") }}>
+                <FilePlus className="w-4 h-4" />
+                <span>Tạo đơn</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); router.push("/scan") }}>
+                <QrCode className="w-4 h-4" />
+                <span>Quét QR</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Nút Đăng xuất */}

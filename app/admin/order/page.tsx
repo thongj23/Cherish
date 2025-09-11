@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/use-toast"
-import AdminLayout from "@/app/admin/layout"
+// Không cần import AdminLayout; layout của thư mục admin tự áp dụng
 interface Order {
   id: string
   customerName: string
@@ -79,8 +79,7 @@ export default function PlaceOrderPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-6">
-      <AdminLayout>
- <h1 className="text-2xl font-bold">Đặt hàng</h1>
+      <h1 className="text-2xl font-bold">Đặt hàng</h1>
 
       {/* ✅ Form đặt hàng */}
       <div className="bg-white p-4 rounded shadow space-y-3 border">
@@ -144,8 +143,6 @@ export default function PlaceOrderPage() {
           </Table>
         )}
       </div>
-      </AdminLayout>
-     
     </div>
   )
 }

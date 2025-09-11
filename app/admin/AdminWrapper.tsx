@@ -70,12 +70,11 @@ export default function AdminWrapper({ children }: AdminWrapperProps) {
     )
   }
 
-  // ✅ Nếu đã đăng nhập thành công thì render children với AdminNav
+  // ✅ Nếu đã đăng nhập: render trang con nếu có, ngược lại fallback AdminPage
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* <AdminNav /> */}
       <main className="p-4">
-        <AdminPage />
+        {children ?? <AdminPage />}
       </main>
     </div>
   )

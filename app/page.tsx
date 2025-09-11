@@ -40,9 +40,25 @@ export default function BioPage() {
         ...doc.data(),
       })) as Product[]
 
-      const visibleProducts = data.filter(
-        (p) => p.status === "active" || p.status === "inactive"
-      )
+      const visibleProducts = data.filter((p) => {
+        const status = String((p as any).status || "").trim().toLowerCase()
+        return status === "active" || status === "inactive"
+      })
+
+      if (process.env.NODE_ENV !== "production") {
+        const byCat: Record<string, number> = {}
+        const bySub: Record<string, number> = {}
+        visibleProducts.forEach((p) => {
+          const c = (p.category || "").toString()
+          const s = (p.subCategory || "").toString()
+          byCat[c] = (byCat[c] || 0) + 1
+          if (c.toLowerCase().includes("charm")) {
+            bySub[s] = (bySub[s] || 0) + 1
+          }
+        })
+        // eslint-disable-next-line no-console
+        console.debug("[Bio] counts:", { byCat, bySub })
+      }
 
       setProducts(visibleProducts)
     } catch (error) {

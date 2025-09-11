@@ -27,7 +27,6 @@ export interface ProductFormData {
   isHidden?: boolean
 }
 
-// ✅ Type riêng cho lỗi:
 type ProductFormErrors = {
   name?: string
   description?: string

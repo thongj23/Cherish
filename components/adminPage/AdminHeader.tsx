@@ -8,11 +8,14 @@ interface AdminHeaderProps {
   onAddProduct: () => void
   onViewImages: () => void
   productCount?: number
+  activeCount?: number
+  inactiveCount?: number
+  disabledCount?: number
 }
 
-export default function AdminHeader({ onAddProduct, onViewImages, productCount = 0 }: AdminHeaderProps) {
+export default function AdminHeader({ onAddProduct, onViewImages, productCount = 0, activeCount = 0, inactiveCount = 0, disabledCount = 0 }: AdminHeaderProps) {
   return (
-    <div className="bg-white border-b border-gray-200 p-6 mb-6">
+    <div className="sticky top-0 z-40 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-gray-200 p-4 sm:p-6 mb-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link href="/">
@@ -47,18 +50,21 @@ export default function AdminHeader({ onAddProduct, onViewImages, productCount =
       </div>
 
       {/* Quick stats */}
-      <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-gray-100">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+      <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-gray-100">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-700 bg-green-50 px-2 py-1 rounded-full">
           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
           <span>Hoạt động</span>
+          <span className="font-semibold">{activeCount}</span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-700 bg-yellow-50 px-2 py-1 rounded-full">
           <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
           <span>Tạm dừng</span>
+          <span className="font-semibold">{inactiveCount}</span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-700 bg-red-50 px-2 py-1 rounded-full">
           <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-          <span>Vô hiệu hóa</span>
+          <span>Ẩn</span>
+          <span className="font-semibold">{disabledCount}</span>
         </div>
       </div>
     </div>
