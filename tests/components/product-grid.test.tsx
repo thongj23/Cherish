@@ -48,5 +48,12 @@ describe('ProductGrid integration', () => {
     const filtered = screen.getAllByTestId('card')
     expect(filtered.map((el) => el.textContent)).toEqual(['Charm Kitty'])
   })
-})
 
+  it('shows empty state when no products match', () => {
+    const others: Product[] = [
+      { id: '10', name: 'Collab Z', description: 'zzz', imageUrl: '', category: 'Collab' },
+    ]
+    render(<ProductGrid products={others} loading={false} />)
+    expect(screen.getByText('Không tìm thấy sản phẩm.')).toBeInTheDocument()
+  })
+})

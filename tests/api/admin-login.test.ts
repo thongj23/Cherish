@@ -101,5 +101,20 @@ describe('POST /api/admin-login', () => {
     const body = await res.json()
     expect(body).toEqual({ success: true })
   })
-})
 
+  it('returns 500 on server error', async () => {
+    const POST = await importHandler()
+    getMock.mockRejectedValue(new Error('db down'))
+
+    const req = new Request('http://localhost/api/admin-login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ password: 'whatever' }),
+    })
+
+    const res: Response = await POST(req as any)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body).toEqual({ success: false, message: 'Server error' })
+  })
+})

@@ -27,5 +27,17 @@ describe('GET /api/revalidate', () => {
     const body = await res.json()
     expect(body).toEqual({ revalidated: true })
   })
-})
 
+  it('returns 500 when revalidate throws', async () => {
+    const { revalidatePath } = await import('next/cache')
+    ;(revalidatePath as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+      throw new Error('boom')
+    })
+    const { GET } = await import('../../app/api/revalidate/route')
+    const req = new Request('http://localhost/api/revalidate?secret=my-secret-token')
+    const res: Response = await GET(req as any)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body).toEqual({ message: 'Error revalidating' })
+  })
+})
