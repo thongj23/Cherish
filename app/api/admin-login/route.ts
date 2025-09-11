@@ -3,43 +3,43 @@ import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import bcrypt from "bcryptjs";
 
-// Xử lý khóa riêng
-const rawKey = process.env.FIREBASE_PRIVATE_KEY || "";
-const parsedKey = rawKey
-  .replace(/^"|"$/g, "") // Loại bỏ dấu ngoặc kép ở đầu và cuối
-  .replace(/\\n/g, "\n") // Thay \n bằng dòng mới thực sự
-  .trim(); // Loại bỏ khoảng trắng thừa
-
-// Kiểm tra định dạng PEM
-if (!parsedKey.startsWith("-----BEGIN PRIVATE KEY-----") || !parsedKey.endsWith("-----END PRIVATE KEY-----")) {
-  console.error("🔥 Invalid PEM key format in FIREBASE_PRIVATE_KEY");
-  throw new Error("Invalid PEM key format");
-}
-
-
-
-
-// Khởi tạo Firebase Admin SDK
-if (!getApps().length) {
+function getDbOrThrow() {
   try {
-    initializeApp({
-      credential: cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: parsedKey,
-      }),
-    });
+    if (!getApps().length) {
+      const rawKey = process.env.FIREBASE_PRIVATE_KEY || "";
+      const parsedKey = rawKey
+        .replace(/^\"|\"$/g, "")
+        .replace(/\\n/g, "\n")
+        .trim();
 
+      if (
+        !parsedKey.startsWith("-----BEGIN PRIVATE KEY-----") ||
+        !parsedKey.endsWith("-----END PRIVATE KEY-----")
+      ) {
+        throw new Error("Invalid PEM key format");
+      }
+
+      initializeApp({
+        credential: cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: parsedKey,
+        }),
+      });
+    }
+    return getFirestore();
   } catch (error) {
-    console.error("🔥 Error initializing Firebase Admin:", JSON.stringify(error, null, 2)); // Log chi tiết hơn
-    throw error; // Ném lỗi để xử lý trong API route
+    console.error(
+      "🔥 Error initializing Firebase Admin:",
+      JSON.stringify(error, null, 2)
+    );
+    throw error;
   }
 }
 
-const db = getFirestore();
-
 export async function POST(req: NextRequest) {
   try {
+    const db = getDbOrThrow();
     const { password } = await req.json();
 
 
