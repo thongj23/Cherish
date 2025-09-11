@@ -42,10 +42,21 @@ export default function AdminPage() {
     }
   }
 
+  const activeCount = products.filter((p) => p.status === "active").length
+  const inactiveCount = products.filter((p) => p.status === "inactive").length
+  const disabledCount = products.filter((p) => p.status === "disabled").length
+
   return (
     <div className="space-y-6">
       {/* Header quản lý sản phẩm */}
-      <AdminHeader onAddProduct={() => handleEdit(null)} onViewImages={openImageModal} productCount={products.length} />
+      <AdminHeader
+        onAddProduct={() => handleEdit(null)}
+        onViewImages={openImageModal}
+        productCount={products.length}
+        activeCount={activeCount}
+        inactiveCount={inactiveCount}
+        disabledCount={disabledCount}
+      />
 
       {/* Bảng sản phẩm */}
       <ProductTable

@@ -1,14 +1,15 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Edit, Trash2, Search, Filter } from "lucide-react"
+import { Edit, Trash2, Search, Filter, Star, ArrowUpDown } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import type { Product, ProductStatus } from "@/types/product/product"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface ProductTableProps {
   products: Product[]
@@ -29,6 +30,18 @@ export default function ProductTable({
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedSubCategory, setSelectedSubCategory] = useState("all")
+  const [statusFilter, setStatusFilter] = useState<"all" | ProductStatus>("all")
+  const [sortKey, setSortKey] = useState<"name" | "price" | null>(null)
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
+  const [page, setPage] = useState(1)
+  const pageSize = 10
+
+  // Debounce search for smoother UX
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(searchTerm), 300)
+    return () => clearTimeout(id)
+  }, [searchTerm])
 
   // Lấy danh sách category duy nhất
   const categories = useMemo(() => {
@@ -47,12 +60,41 @@ export default function ProductTable({
   // Lọc sản phẩm theo tên, danh mục và danh mục phụ
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchSearch = p.name.toLowerCase().includes(debouncedSearch.toLowerCase())
       const matchCategory = selectedCategory === "all" || p.category === selectedCategory
       const matchSubCategory = selectedSubCategory === "all" || p.subCategory === selectedSubCategory
-      return matchSearch && matchCategory && matchSubCategory
+      const matchStatus = statusFilter === "all" || p.status === statusFilter
+      return matchSearch && matchCategory && matchSubCategory && matchStatus
     })
-  }, [products, searchTerm, selectedCategory, selectedSubCategory])
+  }, [products, debouncedSearch, selectedCategory, selectedSubCategory, statusFilter])
+
+  const sortedProducts = useMemo(() => {
+    if (!sortKey) return filteredProducts
+    const arr = [...filteredProducts]
+    arr.sort((a, b) => {
+      if (sortKey === "name") {
+        const va = (a.name || "").toLowerCase()
+        const vb = (b.name || "").toLowerCase()
+        return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va)
+      } else {
+        const pa = a.price || 0
+        const pb = b.price || 0
+        return sortDir === "asc" ? pa - pb : pb - pa
+      }
+    })
+    return arr
+  }, [filteredProducts, sortKey, sortDir])
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1)
+  }, [selectedCategory, selectedSubCategory, statusFilter, debouncedSearch])
+
+  const totalPages = Math.max(1, Math.ceil(sortedProducts.length / pageSize))
+  const pagedProducts = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return sortedProducts.slice(start, start + pageSize)
+  }, [sortedProducts, page])
 
   const renderStatusBadge = (status: ProductStatus | undefined) => {
     switch (status) {
@@ -73,11 +115,21 @@ export default function ProductTable({
     setSelectedSubCategory("all")
   }
 
+  const statusCounts = useMemo(() => {
+    const counts = { all: products.length, active: 0, inactive: 0, disabled: 0 }
+    products.forEach((p) => {
+      if (p.status === "active") counts.active++
+      else if (p.status === "inactive") counts.inactive++
+      else if (p.status === "disabled") counts.disabled++
+    })
+    return counts
+  }, [products])
+
   return (
     <div className="space-y-6">
       {/* Enhanced Search and Filter Bar */}
       <div className="bg-white p-4 rounded-lg border shadow-sm">
-        <div className="flex flex-wrap gap-4 items-center">
+        <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2 flex-1 min-w-[200px]">
             <Search className="w-4 h-4 text-muted-foreground" />
             <Input
@@ -120,6 +172,24 @@ export default function ProductTable({
           </div>
         </div>
 
+        {/* Quick status chips */}
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+          {(["all", "active", "inactive", "disabled"] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-2.5 py-1 rounded-full border text-xs transition ${
+                statusFilter === s
+                  ? "bg-purple-600 text-white border-transparent"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              {s === "all" ? "Tất cả" : s === "active" ? "Còn hàng" : s === "inactive" ? "Tạm hết" : "Ẩn"}
+              <span className="ml-1 opacity-80">({statusCounts[s]})</span>
+            </button>
+          ))}
+        </div>
+
         {/* Filter Summary */}
         <div className="mt-3 flex items-center gap-4 text-sm text-gray-600">
           <span>
@@ -133,6 +203,7 @@ export default function ProductTable({
                 setSearchTerm("")
                 setSelectedCategory("all")
                 setSelectedSubCategory("all")
+                setStatusFilter("all")
               }}
               className="h-6 px-2 text-xs"
             >
@@ -144,9 +215,22 @@ export default function ProductTable({
 
       {/* Loading / Không tìm thấy */}
       {loading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto mb-2"></div>
-          <p>Đang tải...</p>
+        <div className="rounded-lg border overflow-hidden bg-white">
+          <div className="divide-y">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-3">
+                <Skeleton className="w-12 h-12 rounded-lg" />
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-1/2 mb-2" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <Skeleton className="h-8 w-24" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : filteredProducts.length === 0 ? (
         <div className="text-center py-8 bg-white rounded-lg border">
@@ -157,30 +241,51 @@ export default function ProductTable({
           {/* Desktop View */}
           <div className="hidden sm:block rounded-lg border overflow-hidden bg-white shadow-sm">
             <Table>
-              <TableHeader className="bg-gray-50">
+              <TableHeader className="bg-gray-50 sticky top-0 z-10 backdrop-blur supports-[backdrop-filter]:bg-white/70">
                 <TableRow>
                   <TableHead className="w-[80px]">Hình</TableHead>
-                  <TableHead>Tên</TableHead>
+                  <TableHead>
+                    <button
+                      className="inline-flex items-center gap-1 hover:underline"
+                      onClick={() => {
+                        setSortKey("name")
+                        setSortDir((d) => (sortKey === "name" ? (d === "asc" ? "desc" : "asc") : "asc"))
+                      }}
+                    >
+                      Tên <ArrowUpDown className="w-3.5 h-3.5 opacity-70" />
+                    </button>
+                  </TableHead>
                   <TableHead>Danh mục</TableHead>
                   <TableHead>Danh mục phụ</TableHead>
-                  <TableHead>Giá</TableHead>
+                  <TableHead>
+                    <button
+                      className="inline-flex items-center gap-1 hover:underline"
+                      onClick={() => {
+                        setSortKey("price")
+                        setSortDir((d) => (sortKey === "price" ? (d === "asc" ? "desc" : "asc") : "asc"))
+                      }}
+                    >
+                      Giá <ArrowUpDown className="w-3.5 h-3.5 opacity-70" />
+                    </button>
+                  </TableHead>
                   <TableHead>SL</TableHead>
                   <TableHead>Size</TableHead>
                   <TableHead>Trạng thái</TableHead>
-                  <TableHead>Thay đổi trạng thái</TableHead>
                   <TableHead className="text-right">Hành động</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts.map((p) => (
+                {pagedProducts.map((p) => (
                   <TableRow
                     key={p.id}
-                    className={`hover:bg-gray-50 transition-colors ${
-                      p.status === "inactive" ? "opacity-60" : ""
-                    } ${p.status === "disabled" ? "opacity-40" : ""}`}
+                    className={`group hover:bg-gray-50 transition-colors odd:bg-gray-50/40 border-l-4 ${
+                      p.featured ? "border-amber-300" : "border-transparent"
+                    } ${p.status === "inactive" ? "opacity-60" : ""} ${
+                      p.status === "disabled" ? "opacity-40" : ""
+                    }`}
                   >
                     <TableCell>
-                      <div className="relative w-12 h-12 rounded-lg overflow-hidden border">
+                      <div className="relative w-12 h-12 rounded-lg overflow-hidden ring-1 ring-gray-200">
                         <Image
                           src={p.imageUrl || "/placeholder.svg"}
                           alt={p.name}
@@ -190,13 +295,18 @@ export default function ProductTable({
                         />
                       </div>
                     </TableCell>
-                    <TableCell className="font-medium max-w-[200px]">
-                      <div className="truncate">{p.name}</div>
-                      {p.featured && (
-                        <Badge variant="secondary" className="mt-1 text-xs">
-                          Nổi bật
-                        </Badge>
-                      )}
+                    <TableCell className="font-medium max-w-[260px]">
+                      <div className="flex items-start gap-1">
+                        {p.featured && (
+                          <Star className="w-4 h-4 mt-0.5 text-amber-500 flex-shrink-0" />
+                        )}
+                        <div className="truncate text-gray-900">{p.name}</div>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {p.featured && (
+                          <Badge variant="secondary" className="text-[10px] py-0">Nổi bật</Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{p.category}</Badge>
@@ -213,32 +323,34 @@ export default function ProductTable({
                     <TableCell className="font-medium">{p.price?.toLocaleString()}đ</TableCell>
                     <TableCell>{p.quantity}</TableCell>
                     <TableCell>{p.size}</TableCell>
-                    <TableCell>{renderStatusBadge(p.status)}</TableCell>
                     <TableCell>
-                      <Select
-                        value={p.status}
-                        onValueChange={(value) => handleChangeStatus(p.id, value as ProductStatus)}
-                      >
-                        <SelectTrigger className="w-[140px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="active">Còn hàng</SelectItem>
-                          <SelectItem value="inactive">Tạm hết hàng</SelectItem>
-                          <SelectItem value="disabled">Ẩn</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex flex-col gap-1">
+                        {renderStatusBadge(p.status)}
+                        <Select
+                          value={p.status}
+                          onValueChange={(value) => handleChangeStatus(p.id, value as ProductStatus)}
+                        >
+                          <SelectTrigger className="w-[140px] h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Còn hàng</SelectItem>
+                            <SelectItem value="inactive">Tạm hết hàng</SelectItem>
+                            <SelectItem value="disabled">Ẩn</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end">
-                        <Button size="sm" variant="outline" onClick={() => handleEdit(p)} className="h-8 w-8 p-0">
+                        <Button size="icon" variant="ghost" onClick={() => handleEdit(p)} className="h-8 w-8">
                           <Edit className="w-4 h-4" />
                         </Button>
                         <Button
-                          size="sm"
-                          variant="outline"
+                          size="icon"
+                          variant="ghost"
                           onClick={() => handleDelete(p.id)}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -252,7 +364,7 @@ export default function ProductTable({
 
           {/* Mobile View */}
           <div className="sm:hidden space-y-4">
-            {filteredProducts.map((p) => (
+            {pagedProducts.map((p) => (
               <div
                 key={p.id}
                 className={`bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow ${
@@ -270,7 +382,10 @@ export default function ProductTable({
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold truncate">{p.name}</h3>
+                    <div className="flex items-start gap-1">
+                      {p.featured && <Star className="w-4 h-4 mt-0.5 text-amber-500" />}
+                      <h3 className="font-semibold truncate">{p.name}</h3>
+                    </div>
                     <div className="flex flex-wrap gap-1 mt-1">
                       <Badge variant="outline" className="text-xs">
                         {p.category}
@@ -330,6 +445,31 @@ export default function ProductTable({
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between mt-4 text-sm text-gray-700">
+            <div>
+              Trang {page}/{totalPages}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Trước
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Sau
+              </Button>
+            </div>
           </div>
         </>
       )}

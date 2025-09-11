@@ -36,12 +36,17 @@ export default function ProductCard({
   const isInactive = product.status === "inactive"
   const thumbnailUrl = getThumbnailSrc(product.imageUrl || "")
   const modalUrl = product.imageUrl || placeholder
+  const [thumbSrc, setThumbSrc] = useState(thumbnailUrl)
+
+  useEffect(() => {
+    setThumbSrc(thumbnailUrl)
+  }, [thumbnailUrl])
 
   return (
     <>
       {/* CARD */}
       <Card
-        className={`overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl
+        className={`overflow-hidden transition-all duration-300 md:hover:scale-105 md:hover:shadow-2xl
           ${index % 2 === 0
             ? "bg-white/95 backdrop-blur-md text-gray-800 border-purple-200 shadow-lg"
             : "bg-gradient-to-r from-purple-100 to-pink-100 backdrop-blur-md text-gray-800 border-purple-300 shadow-lg"}
@@ -60,7 +65,7 @@ export default function ProductCard({
               aria-label={`Xem ảnh ${product.name}`}
             >
               <Image
-                src={thumbnailUrl}
+                src={thumbSrc}
                 alt={product.name}
                 width={96}
                 height={96}
@@ -70,6 +75,7 @@ export default function ProductCard({
                 quality={85}
                 placeholder="blur"
                 blurDataURL={placeholder}
+                onError={() => setThumbSrc(placeholder)}
               />
             </div>
 
@@ -78,9 +84,11 @@ export default function ProductCard({
               href={product.link || "#"}
               className={`flex-1 ${!product.link || isInactive ? "pointer-events-none" : ""}`}
               aria-label={`Xem chi tiết ${product.name}`}
+              target={product.link ? "_blank" : undefined}
+              rel={product.link ? "noopener noreferrer" : undefined}
             >
-              <div className="flex-1 p-3 sm:p-4">
-                <div className="flex items-start justify-between">
+              <div className="flex-1 p-3 sm:p-4 min-h-[88px]">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-sm lg:text-base mb-1 line-clamp-1">
                       {product.name}
@@ -88,7 +96,6 @@ export default function ProductCard({
                     <p className="text-xs sm:text-sm mb-2 line-clamp-2 text-gray-600">
                       {product.description}
                     </p>
-
                     <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                       {product.featured && (
                         <Badge className="bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs px-2 py-0 shadow-sm uppercase tracking-wide">
@@ -114,7 +121,7 @@ export default function ProductCard({
                     </div>
                   </div>
                   {product.link && !isInactive && (
-                    <ExternalLink className="w-4 h-4 ml-2 text-purple-500 flex-shrink-0" />
+                    <ExternalLink className="w-4 h-4 mt-0.5 text-purple-500 flex-shrink-0" />
                   )}
                 </div>
               </div>
