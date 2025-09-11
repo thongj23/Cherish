@@ -10,6 +10,9 @@
     "dev": "next dev",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:check": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0",
+    "typecheck": "tsc -p tsconfig.ci.json --noEmit",
+    "test": "npm run typecheck",
+    "test:ci": "npm run typecheck",
     "prepare": "husky",
     "start": "next start",
     "format": "prettier --write ."
