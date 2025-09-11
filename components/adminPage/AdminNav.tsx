@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ReceiptText, Home, ShoppingCart, LogOut, QrCode, FilePlus } from "lucide-react"
+import { ReceiptText, Home, ShoppingCart, LogOut, QrCode, FilePlus, BarChart3 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -35,6 +35,17 @@ export default function AdminNav() {
             >
               <Home className="w-4 h-4 mr-2" />
               Trang chủ
+            </Button>
+          </Link>
+
+          {/* Thống kê */}
+          <Link href="/admin/stats">
+            <Button
+              variant={pathname.startsWith("/admin/stats") ? "default" : "outline"}
+              className={cn("transition-all", pathname.startsWith("/admin/stats") && "font-semibold")}
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Thống kê
             </Button>
           </Link>
 
