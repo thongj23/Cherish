@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ReceiptText, Home, ShoppingCart, LogOut, BarChart3 } from "lucide-react"
+import { ReceiptText, Home, ShoppingCart, LogOut, BarChart3, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function AdminNav() {
@@ -51,6 +51,17 @@ export default function AdminNav() {
             >
               <ShoppingCart className="w-4 h-4 mr-2" />
               Đơn hàng
+            </Button>
+          </Link>
+
+          {/* Feedback */}
+          <Link href="/admin/feedback">
+            <Button
+              variant={pathname.startsWith("/admin/feedback") ? "default" : "outline"}
+              className={cn("transition-all", pathname.startsWith("/admin/feedback") && "font-semibold")}
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Feedback
             </Button>
           </Link>
         </div>

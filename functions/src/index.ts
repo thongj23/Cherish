@@ -113,13 +113,16 @@ export const aggregateOrderCreated = onDocumentCreated("orders/{id}", async (eve
   const inc = admin.firestore.FieldValue.increment(1)
   const incTotal = admin.firestore.FieldValue.increment(Number(after?.pricing?.total || 0))
 
+  const statusKey = String(after?.fulfillment?.status || "pending")
+  const funnel: any = {}
+  funnel[statusKey] = inc
   batch.set(
     ref,
     {
       dateKey: key,
       dateMs: ms,
       totals: { count: inc, amount: incTotal },
-      funnel: { [(after?.fulfillment?.status || "pending") as string]: inc },
+      funnel,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: true }
@@ -173,14 +176,10 @@ export const aggregateOrderUpdated = onDocumentUpdated("orders/{id}", async (eve
   const batch = db.batch()
   const dec = admin.firestore.FieldValue.increment(-1)
   const inc = admin.firestore.FieldValue.increment(1)
-  batch.set(
-    ref,
-    {
-      funnel: { [prevSt]: dec, [nextSt]: inc },
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    },
-    { merge: true }
-  )
+  const funnelUpd: any = {}
+  funnelUpd[prevSt] = dec
+  funnelUpd[nextSt] = inc
+  batch.set(ref, { funnel: funnelUpd, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true })
 
   await batch.commit()
 })
