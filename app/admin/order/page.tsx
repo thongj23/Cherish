@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { collection, doc, getDocs, updateDoc, serverTimestamp } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import Link from "next/link"
+import { Card } from "@/components/ui/card"
+import { Input as TextInput } from "@/components/ui/input"
+import { QrCode } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 
 type AdminOrder = {
@@ -34,6 +37,13 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState<string>("all")
+  const [showScanner, setShowScanner] = useState(false)
+  const [raw, setRaw] = useState("")
+  const [scanMsg, setScanMsg] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const scannerRef = useRef<HTMLDivElement | null>(null)
+  const scannerInstance = useRef<any>(null)
+  const functionUrl = process.env.NEXT_PUBLIC_FUNCTION_SAVE_SCAN_URL || ""
 
   const fetchOrders = async () => {
     setLoading(true)
@@ -49,6 +59,68 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     fetchOrders()
   }, [])
+
+  // Load QR scanner when panel is open
+  useEffect(() => {
+    let cancelled = false
+    if (!showScanner) {
+      // clear if closing
+      try { scannerInstance.current?.clear?.() } catch (_) {}
+      scannerInstance.current = null
+      return
+    }
+    ;(async () => {
+      try {
+        const mod: any = await import("html5-qrcode")
+        if (cancelled) return
+        const Html5QrcodeScanner = mod.Html5QrcodeScanner
+        if (scannerRef.current && !scannerInstance.current) {
+          scannerInstance.current = new Html5QrcodeScanner(
+            scannerRef.current.id,
+            { fps: 10, qrbox: { width: 220, height: 220 }, rememberLastUsedCamera: true, aspectRatio: 1 },
+            false
+          )
+          const onSuccess = (decodedText: string) => {
+            setRaw(decodedText)
+            setScanMsg("Đã đọc mã – kiểm tra và bấm Gửi")
+          }
+          const onError = () => {}
+          scannerInstance.current.render(onSuccess, onError)
+        }
+      } catch (err) {
+        console.error("QR scanner load error", err)
+      }
+    })()
+    return () => {
+      cancelled = true
+      try { scannerInstance.current?.clear?.() } catch (_) {}
+      scannerInstance.current = null
+    }
+  }, [showScanner])
+
+  const submitScan = async () => {
+    if (!raw.trim()) {
+      setScanMsg("Vui lòng quét mã hoặc nhập nội dung")
+      return
+    }
+    if (!functionUrl) {
+      setScanMsg("Thiếu URL Cloud Function (NEXT_PUBLIC_FUNCTION_SAVE_SCAN_URL)")
+      return
+    }
+    setSubmitting(true)
+    setScanMsg(null)
+    try {
+      const res = await fetch(functionUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ raw, source: "admin" }) })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.message || "Gửi thất bại")
+      setScanMsg("Đã lưu thành công")
+      setRaw("")
+    } catch (err: any) {
+      setScanMsg(err?.message || "Có lỗi xảy ra")
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
@@ -92,10 +164,34 @@ export default function AdminOrdersPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 justify-between">
         <h1 className="text-2xl font-bold">Quản lý đơn hàng</h1>
-        <Link href="/order">
-          <Button variant="outline">Tạo đơn</Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowScanner((v) => !v)}>
+            <QrCode className="w-4 h-4 mr-1" /> {showScanner ? "Ẩn quét QR" : "Quét QR"}
+          </Button>
+          <Link href="/order">
+            <Button variant="outline">Tạo đơn</Button>
+          </Link>
+        </div>
       </div>
+
+      {showScanner && (
+        <Card className="p-3 border-purple-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <div id="qr-reader-admin" ref={scannerRef} className="w-full" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-gray-700">Nội dung</label>
+              <TextInput value={raw} onChange={(e) => setRaw(e.target.value)} placeholder="Dán/nhập nội dung tại đây" />
+              <div className="flex gap-2">
+                <Button onClick={submitScan} disabled={submitting}>{submitting ? "Đang gửi..." : "Gửi"}</Button>
+                <Button variant="ghost" onClick={() => { setRaw(""); setScanMsg(null) }}>Xóa</Button>
+              </div>
+              {scanMsg && <p className="text-sm text-gray-700">{scanMsg}</p>}
+            </div>
+          </div>
+        </Card>
+      )}
 
       <div className="bg-white p-4 rounded-lg border shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
