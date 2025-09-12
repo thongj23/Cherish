@@ -40,6 +40,9 @@ export default function OrderPage() {
     { name: "", category: "Dep", subCategory: "", size: null, quantity: 1, price: null },
   ])
   const [saving, setSaving] = useState(false)
+  const [region, setRegion] = useState<"HCM" | "HN" | "TINH">("HCM")
+  const [autoShip, setAutoShip] = useState(true)
+  const [freeShipThreshold, setFreeShipThreshold] = useState<number>(300000)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [loadingProducts, setLoadingProducts] = useState(false)
@@ -76,6 +79,14 @@ export default function OrderPage() {
 
   const subtotal = items.reduce((sum, it) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 0), 0)
   const total = subtotal + (Number(shippingFee) || 0)
+
+  useEffect(() => {
+    if (!autoShip) return
+    const preset: Record<string, number> = { HCM: 15000, HN: 20000, TINH: 30000 }
+    const base = preset[region]
+    const fee = subtotal >= freeShipThreshold ? 0 : base
+    setShippingFee(fee)
+  }, [region, subtotal, freeShipThreshold, autoShip])
 
   const updateItem = (index: number, patch: Partial<Item>) => {
     setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)))
@@ -250,16 +261,40 @@ export default function OrderPage() {
           <span>Tạm tính</span>
           <strong>{subtotal.toLocaleString("vi-VN")}đ</strong>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="text-sm text-gray-700 flex items-center justify-between gap-3">
+            <span>Khu vực giao</span>
+            <Select value={region} onValueChange={(v: any) => setRegion(v)}>
+              <SelectTrigger className="w-40 h-8"><SelectValue placeholder="Khu vực" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="HCM">TP.HCM</SelectItem>
+                <SelectItem value="HN">Hà Nội</SelectItem>
+                <SelectItem value="TINH">Tỉnh</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="text-sm text-gray-700 flex items-center justify-between gap-3">
+            <span>Miễn phí từ</span>
+            <div className="flex items-center gap-2">
+              <Input type="number" value={freeShipThreshold} onChange={(e) => setFreeShipThreshold(Number(e.target.value) || 0)} className="h-8 w-32 text-right" />
+              <strong className="whitespace-nowrap">đ</strong>
+            </div>
+          </div>
+        </div>
         <div className="text-sm text-gray-700 flex items-center justify-between gap-3">
-          <span>Phí giao (tự đặt)</span>
+          <span>Phí giao</span>
           <div className="flex items-center gap-2">
             <Input
               type="number"
               value={shippingFee}
               onChange={(e) => setShippingFee(Number(e.target.value) || 0)}
               className="h-8 w-28 text-right"
+              disabled={autoShip}
             />
-            <strong className="whitespace-nowrap">đ</strong>
+            <label className="text-xs flex items-center gap-2">
+              <input type="checkbox" checked={autoShip} onChange={(e) => setAutoShip(e.target.checked)} />
+              Tự tính theo khu vực/ngưỡng
+            </label>
           </div>
         </div>
         <div className="text-base flex items-center justify-between">

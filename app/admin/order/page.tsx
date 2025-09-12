@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { collection, doc, getDocs, updateDoc, serverTimestamp } from "firebase/firestore"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { collection, doc, getDocs, updateDoc, serverTimestamp, query, orderBy, limit, startAfter, arrayUnion } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
@@ -34,20 +34,27 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState<string>("all")
+  const [lastDoc, setLastDoc] = useState<any>(null)
+  const [hasMore, setHasMore] = useState(true)
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async (reset = true) => {
     setLoading(true)
     try {
-      const snap = await getDocs(collection(db, "orders"))
+      const base = query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(20))
+      const qRef = reset || !lastDoc ? base : query(base, startAfter(lastDoc))
+      const snap = await getDocs(qRef)
       const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as AdminOrder[]
-      setOrders(list)
+      setOrders((prev) => (reset ? list : [...prev, ...list]))
+      setLastDoc(snap.docs[snap.docs.length - 1] || null)
+      setHasMore(snap.docs.length === 20)
     } finally {
       setLoading(false)
     }
-  }
+  }, [lastDoc])
 
   useEffect(() => {
-    fetchOrders()
+    fetchOrders(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const filtered = useMemo(() => {
@@ -64,11 +71,17 @@ export default function AdminOrdersPage() {
   }, [orders, search, status])
 
   const updateStatus = async (id: string, newStatus: string) => {
+    const current = orders.find((o) => o.id === id)?.fulfillment?.status || null
     await updateDoc(doc(db, "orders", id), {
       "fulfillment.status": newStatus,
       updatedAt: serverTimestamp(),
-    })
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, fulfillment: { ...(o.fulfillment || {}), status: newStatus } } : o)))
+      "meta.history": arrayUnion({ at: serverTimestamp(), from: current, to: newStatus }) as any,
+    } as any)
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === id ? { ...o, fulfillment: { ...(o.fulfillment || {}), status: newStatus } } : o
+      )
+    )
   }
 
   const renderStatusBadge = (s?: string) => {
@@ -88,18 +101,53 @@ export default function AdminOrdersPage() {
     }
   }
 
+  const exportCSV = () => {
+    const header = ["id","name","phone","items","total","status","createdAt"]
+    const rows = filtered.map(o => {
+      const created = o.createdAt?.toDate ? o.createdAt.toDate().toISOString() : ""
+      const total = Number(o?.pricing?.total || 0)
+      const csv = [
+        o.id,
+        o.customer?.name || "",
+        o.customer?.phone || "",
+        String(o.items?.length || 0),
+        String(total),
+        o.fulfillment?.status || "",
+        created
+      ]
+      return csv.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")
+    })
+    const csv = [header.join(","), ...rows].join("\n")
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `orders-${Date.now()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 justify-between">
         <h1 className="text-2xl font-bold">Quản lý đơn hàng</h1>
-        <Link href="/order">
-          <Button variant="outline">Tạo đơn</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/order">
+            <Button variant="outline">Tạo đơn</Button>
+          </Link>
+          <Button onClick={exportCSV}>Xuất CSV</Button>
+        </div>
       </div>
 
+      {/* Filter */}
       <div className="bg-white p-4 rounded-lg border shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
-          <Input placeholder="Tìm theo mã đơn / tên / SĐT" value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1 min-w-[220px]" />
+          <Input
+            placeholder="Tìm theo mã đơn / tên / SĐT"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 min-w-[220px]"
+          />
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="w-[180px]"><SelectValue placeholder="Trạng thái" /></SelectTrigger>
             <SelectContent>
@@ -109,10 +157,11 @@ export default function AdminOrdersPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="ghost" onClick={() => { setSearch(""); setStatus("all") }}>Xóa lọc</Button>
+          <Button variant="ghost" onClick={() => { setSearch(""); setStatus("all"); fetchOrders(true) }}>Xóa lọc</Button>
         </div>
       </div>
 
+      {/* Table */}
       {loading ? (
         <div className="rounded-lg border overflow-hidden bg-white">
           <div className="divide-y">
@@ -145,7 +194,9 @@ export default function AdminOrdersPage() {
             <TableBody>
               {filtered.map((o) => (
                 <TableRow key={o.id}>
-                  <TableCell className="font-mono text-xs">{o.id}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    <Link href={`/admin/order/${o.id}`} className="underline text-purple-600">{o.id}</Link>
+                  </TableCell>
                   <TableCell className="font-medium">{o.customer?.name || "-"}</TableCell>
                   <TableCell>{o.customer?.phone || "-"}</TableCell>
                   <TableCell>{o.items?.length || 0}</TableCell>
@@ -165,6 +216,11 @@ export default function AdminOrdersPage() {
               ))}
             </TableBody>
           </Table>
+          {hasMore && (
+            <div className="flex justify-center p-3">
+              <Button variant="outline" onClick={() => fetchOrders(false)}>Tải thêm</Button>
+            </div>
+          )}
         </div>
       )}
     </div>

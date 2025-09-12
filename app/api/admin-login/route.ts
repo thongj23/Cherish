@@ -86,7 +86,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true });
+    // Set a simple admin session cookie (httpOnly). For production, add Secure and SameSite.
+    const res = NextResponse.json({ success: true });
+    const isProd = process.env.NODE_ENV === "production";
+    res.headers.append(
+      "Set-Cookie",
+      `admin_session=1; Path=/; HttpOnly; Max-Age=${60 * 60 * 12}; ${isProd ? "Secure; SameSite=Lax;" : ""}`
+    );
+    return res;
   } catch (err) {
     console.error("🔥 /api/admin-login error:", err);
     return NextResponse.json(
