@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { initializeApp, cert, getApps } from "firebase-admin/app"
 import { getFirestore, FieldValue } from "firebase-admin/firestore"
+import { createHash } from "node:crypto"
 import { z } from "zod"
 
 function parsePrivateKey(): string {
@@ -94,6 +95,20 @@ export async function POST(req: NextRequest) {
     const discount = Number(pricing?.discount) || 0
     const total = subtotal + shippingFee - discount
 
+    // Optional QR checksum verification (if provided)
+    let qrVerified: boolean | undefined = undefined
+    const salt = process.env.QR_ORDER_SALT || ""
+    const qr = (meta && (meta.qr || meta.qrMeta)) as any
+    if (salt && qr?.checksum && qr?.canonical) {
+      try {
+        const calc = createHash('sha256').update(String(salt) + String(qr.canonical)).digest('hex')
+        if (calc !== String(qr.checksum)) {
+          return NextResponse.json({ ok: false, message: 'Invalid QR checksum' }, { status: 400 })
+        }
+        qrVerified = true
+      } catch {}
+    }
+
     const orderDoc = {
       customer: {
         name: String(customer.name),
@@ -125,6 +140,8 @@ export async function POST(req: NextRequest) {
         scanId: meta?.scanId || null,
         voucherCode: meta?.voucherCode || null,
         note: meta?.note || null,
+        qrVerified: qrVerified === true ? true : undefined,
+        history: meta?.history || undefined,
       },
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),

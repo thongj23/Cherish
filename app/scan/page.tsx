@@ -14,6 +14,7 @@ export default function ScanPage() {
   const [raw, setRaw] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [scanId, setScanId] = useState<string | null>(null)
   const scannerRef = useRef<HTMLDivElement | null>(null)
   const scannerInstance = useRef<any>(null)
 
@@ -99,8 +100,8 @@ export default function ScanPage() {
       if (!res.ok) {
         throw new Error(data?.message || "Gửi thất bại")
       }
-      setMessage("Đã lưu thành công")
-      setRaw("")
+      if (data?.id) setScanId(String(data.id))
+      setMessage("Đã lưu bản quét thành công")
     } catch (err: any) {
       setMessage(err?.message || "Có lỗi xảy ra")
     } finally {
@@ -113,6 +114,15 @@ export default function ScanPage() {
     setSubmitting(true)
     setMessage(null)
     try {
+      // Nếu chưa có scanId thì lưu bản quét trước để liên kết
+      let sid = scanId
+      if (!sid) {
+        const endpoint = functionUrl || '/api/save-scan'
+        const resScan = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ raw, source: 'web' }) })
+        const dataScan = await resScan.json().catch(() => ({}))
+        if (resScan.ok && dataScan?.id) sid = String(dataScan.id)
+        setScanId(sid || null)
+      }
       // Normalize payload for /api/orders
       const customer = parsed.customer
         ? parsed.customer
@@ -130,7 +140,7 @@ export default function ScanPage() {
         pricing: { subtotal, shippingFee, discount, total, currency: "VND" },
         fulfillment: parsed.fulfillment || { method: "delivery", status: "pending" },
         payment: parsed.payment || { method: "cod", status: "unpaid" },
-        meta: { ...(parsed.meta || {}), source: "qr" },
+        meta: { ...(parsed.meta || {}), source: "qr", scanId: sid || null },
       }
 
       const res = await fetch("/api/orders", {
@@ -141,7 +151,6 @@ export default function ScanPage() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.message || "Tạo đơn thất bại")
       setMessage("Đã tạo đơn hàng từ QR")
-      setRaw("")
     } catch (err: any) {
       setMessage(err?.message || "Có lỗi xảy ra")
     } finally {

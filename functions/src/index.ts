@@ -43,15 +43,20 @@ export const saveScan = onRequest(async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*")
   res.setHeader("Access-Control-Allow-Headers", "Content-Type")
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS")
-  if (req.method === "OPTIONS") return res.status(204).send("")
+  if (req.method === "OPTIONS") {
+    res.status(204).send("")
+    return
+  }
 
   if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method not allowed" })
+    res.status(405).json({ message: "Method not allowed" })
+    return
   }
 
   const raw = (req.body?.raw ?? "").toString()
   if (!raw.trim()) {
-    return res.status(400).json({ message: "Missing 'raw'" })
+    res.status(400).json({ message: "Missing 'raw'" })
+    return
   }
 
   let name: string | null = null
@@ -64,10 +69,8 @@ export const saveScan = onRequest(async (req, res) => {
     name = parsed.name ?? null
     phone = parsed.phone ?? null
     email = parsed.email ?? null
-    // If there is extra info, keep original raw as note as well
     note = parsed.note ?? null
   } else {
-    // Raw text: try to pick email/phone, store all as note
     email = extractEmail(raw)
     phone = extractPhone(raw)
     note = raw
@@ -83,6 +86,7 @@ export const saveScan = onRequest(async (req, res) => {
   }
 
   const ref = await db.collection("scans").add(doc)
-  return res.status(200).json({ ok: true, id: ref.id })
+  res.status(200).json({ ok: true, id: ref.id })
 })
+
 

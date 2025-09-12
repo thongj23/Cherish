@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Search } from "lucide-react"
+import Link from "next/link"
 
 type OrderDoc = any
 
@@ -90,49 +91,50 @@ export default function OrdersLookupPage() {
       {!message && orders.length > 0 && (
         <div className="space-y-3">
           {orders.map((o) => (
-            <Card key={o.id} className="p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm text-gray-500">Mã đơn</div>
-                  <div className="font-semibold">{o.id}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-500">Tổng</div>
-                  <div className="font-semibold text-purple-700">
-                    {o?.pricing?.total ? Number(o.pricing.total).toLocaleString("vi-VN") + "đ" : "-"}
+            <Link key={o.id} href={`/orders/${o.id}`} className="block">
+              <Card className="p-3 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm text-gray-500">Mã đơn</div>
+                    <div className="font-semibold underline decoration-dotted underline-offset-2">{o.id}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-gray-500">Tổng</div>
+                    <div className="font-semibold text-purple-700">
+                      {o?.pricing?.total ? Number(o.pricing.total).toLocaleString("vi-VN") + "đ" : "-"}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="mt-2 flex items-center justify-between text-sm">
-                <div className="text-gray-600 truncate">
-                  {o?.items?.[0]?.name}
-                  {o?.items?.length > 1 ? ` +${o.items.length - 1} sp` : ""}
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <div className="text-gray-600 truncate">
+                    {o?.items?.[0]?.name}
+                    {o?.items?.length > 1 ? ` +${o.items.length - 1} sp` : ""}
+                  </div>
+                  <div>
+                    <Badge variant="secondary">
+                      {o?.fulfillment?.status === "completed"
+                        ? "Hoàn tất"
+                        : o?.fulfillment?.status === "shipped"
+                        ? "Đã gửi"
+                        : o?.fulfillment?.status === "packed"
+                        ? "Đang đóng"
+                        : o?.fulfillment?.status === "confirmed"
+                        ? "Đã xác nhận"
+                        : o?.fulfillment?.status === "canceled"
+                        ? "Đã hủy"
+                        : "Đang xử lý"}
+                    </Badge>
+                  </div>
                 </div>
-                <div>
-                  <Badge variant="secondary">
-                    {o?.fulfillment?.status === "completed"
-                      ? "Hoàn tất"
-                      : o?.fulfillment?.status === "shipped"
-                      ? "Đã gửi"
-                      : o?.fulfillment?.status === "packed"
-                      ? "Đang đóng"
-                      : o?.fulfillment?.status === "confirmed"
-                      ? "Đã xác nhận"
-                      : o?.fulfillment?.status === "canceled"
-                      ? "Đã hủy"
-                      : "Đang xử lý"}
-                  </Badge>
-                </div>
-              </div>
 
-              {o?.customer?.address && (
-                <div className="mt-2 text-xs text-gray-500 truncate">Giao: {o.customer.address}</div>
-              )}
-            </Card>
+                {o?.customer?.address && (
+                  <div className="mt-2 text-xs text-gray-500 truncate">Giao: {o.customer.address}</div>
+                )}
+              </Card>
+            </Link>
           ))}
         </div>
       )}
     </div>
   )
 }
-
