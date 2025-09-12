@@ -14,6 +14,7 @@
     "test": "npm run typecheck",
     "test:ci": "npm run typecheck",
     "setup:firebase-admin": "node scripts/configure-firebase-admin.mjs",
+    "seed:feedbacks": "node scripts/seed-feedbacks.js",
     "prepare": "husky",
     "start": "next start",
     "format": "prettier --write ."
