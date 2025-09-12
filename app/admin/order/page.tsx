@@ -145,7 +145,11 @@ export default function AdminOrdersPage() {
             <TableBody>
               {filtered.map((o) => (
                 <TableRow key={o.id}>
-                  <TableCell className="font-mono text-xs">{o.id}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    <Link href={`/admin/order/${o.id}`} className="underline text-purple-600">
+                      {o.id}
+                    </Link>
+                  </TableCell>
                   <TableCell className="font-medium">{o.customer?.name || "-"}</TableCell>
                   <TableCell>{o.customer?.phone || "-"}</TableCell>
                   <TableCell>{o.items?.length || 0}</TableCell>
