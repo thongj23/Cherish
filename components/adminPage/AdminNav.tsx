@@ -20,7 +20,9 @@ export default function AdminNav() {
 
   const handleLogout = () => {
     localStorage.removeItem("isAdminLoggedIn")
-    router.push("/admin") // hoặc reload lại nếu cần: router.refresh()
+    fetch('/api/admin-logout', { method: 'POST' }).finally(() => {
+      router.push("/admin")
+    })
   }
 
   return (
@@ -67,7 +69,8 @@ export default function AdminNav() {
                 variant={
                   pathname.startsWith("/admin/order") ||
                   pathname.startsWith("/order") ||
-                  pathname.startsWith("/scan")
+                  pathname.startsWith("/scan") ||
+                  pathname.startsWith("/orders")
                     ? "default"
                     : "outline"
                 }
@@ -90,6 +93,10 @@ export default function AdminNav() {
               <DropdownMenuItem onSelect={(e) => { e.preventDefault(); router.push("/scan") }}>
                 <QrCode className="w-4 h-4" />
                 <span>Quét QR</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); router.push("/orders") }}>
+                <ReceiptText className="w-4 h-4" />
+                <span>Tra cứu đơn</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

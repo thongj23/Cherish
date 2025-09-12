@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { initializeApp, cert, getApps } from "firebase-admin/app"
 import { getFirestore, FieldValue } from "firebase-admin/firestore"
+import { z } from "zod"
 
 function parsePrivateKey(): string {
   const raw = process.env.FIREBASE_PRIVATE_KEY || ""
@@ -34,6 +35,17 @@ function getDb() {
 
 export async function POST(req: NextRequest) {
   try {
+    // Basic rate limit (best effort): 30 req/min per IP
+    const ip = req.headers.get('x-forwarded-for') || 'unknown'
+    const g: any = globalThis as any
+    if (!g.__order_rl) g.__order_rl = new Map<string, { c: number; t: number }>()
+    const now = Date.now()
+    const rec = g.__order_rl.get(ip) || { c: 0, t: now }
+    if (now - rec.t > 60_000) { rec.c = 0; rec.t = now }
+    rec.c += 1
+    g.__order_rl.set(ip, rec)
+    if (rec.c > 30) return NextResponse.json({ ok: false, message: 'Thử lại sau (rate limit)' }, { status: 429 })
+
     const payload = await req.json()
     const customer = payload?.customer || {}
     const items = Array.isArray(payload?.items) ? payload.items : []
@@ -42,11 +54,38 @@ export async function POST(req: NextRequest) {
     const payment = payload?.payment || { method: "cod", status: "unpaid" }
     const meta = payload?.meta || { source: "web" }
 
-    if (!customer?.name || !customer?.phone) {
-      return NextResponse.json({ ok: false, message: "Thiếu tên hoặc số điện thoại" }, { status: 400 })
-    }
-    if (!items.length) {
-      return NextResponse.json({ ok: false, message: "Đơn phải có ít nhất 1 sản phẩm" }, { status: 400 })
+    // Validate with zod
+    const itemSchema = z.object({
+      name: z.string().min(1),
+      category: z.string().optional().default(""),
+      subCategory: z.string().optional().default(""),
+      imageUrl: z.string().url().optional().nullable(),
+      size: z.number().optional().nullable(),
+      quantity: z.number().int().positive(),
+      price: z.number().nonnegative(),
+    })
+    const schema = z.object({
+      customer: z.object({
+        name: z.string().min(1),
+        phone: z.string().min(6),
+        email: z.string().email().optional().nullable(),
+        address: z.string().optional().nullable(),
+      }),
+      items: z.array(itemSchema).min(1),
+      pricing: z.object({
+        subtotal: z.number().nonnegative().optional(),
+        shippingFee: z.number().nonnegative().optional(),
+        discount: z.number().nonnegative().optional(),
+        total: z.number().nonnegative().optional(),
+        currency: z.string().optional(),
+      }).optional(),
+      fulfillment: z.object({ method: z.string().optional(), status: z.string().optional() }).optional(),
+      payment: z.object({ method: z.string().optional(), status: z.string().optional(), transactionId: z.string().optional() }).optional(),
+      meta: z.any().optional(),
+    })
+    const parsed = schema.safeParse({ customer, items, pricing, fulfillment, payment, meta })
+    if (!parsed.success) {
+      return NextResponse.json({ ok: false, message: 'Dữ liệu không hợp lệ' }, { status: 400 })
     }
 
     // Recalculate totals on server
@@ -99,4 +138,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, message: err?.message || "Server error" }, { status: 500 })
   }
 }
-
