@@ -10,6 +10,7 @@ export interface Product {
   featured?: boolean
   quantity?: number
   size?: number
+  sizes?: Record<string, number> // tồn kho theo size, ví dụ {"36":10,"37":5}
   status?: ProductStatus
   link?: string
 }

@@ -51,16 +51,7 @@ export default function AdminNav() {
             </Button>
           </Link>
 
-          {/* Hóa đơn */}
-          <Link href="/admin/invoice">
-            <Button
-              variant={pathname.startsWith("/admin/invoice") ? "default" : "outline"}
-              className={cn("transition-all", pathname.startsWith("/admin/invoice") && "font-semibold")}
-            >
-              <ReceiptText className="w-4 h-4 mr-2" />
-              Hóa đơn
-            </Button>
-          </Link>
+          {/* (Đã bỏ Hóa đơn) */}
 
           {/* Đơn hàng (gom nhóm) */}
           <DropdownMenu>
@@ -82,21 +73,29 @@ export default function AdminNav() {
             <DropdownMenuContent align="start">
               <DropdownMenuLabel>Đơn hàng</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); router.push("/admin/order") }}>
-                <ShoppingCart className="w-4 h-4" />
-                <span>Quản lý đơn</span>
+              <DropdownMenuItem asChild>
+                <Link href="/admin/order" className="inline-flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4" />
+                  <span>Quản lý đơn</span>
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); router.push("/order") }}>
-                <FilePlus className="w-4 h-4" />
-                <span>Tạo đơn</span>
+              <DropdownMenuItem asChild>
+                <Link href="/order" className="inline-flex items-center gap-2">
+                  <FilePlus className="w-4 h-4" />
+                  <span>Tạo đơn</span>
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); router.push("/scan") }}>
-                <QrCode className="w-4 h-4" />
-                <span>Quét QR</span>
+              <DropdownMenuItem asChild>
+                <Link href="/scan" className="inline-flex items-center gap-2">
+                  <QrCode className="w-4 h-4" />
+                  <span>Quét QR</span>
+                </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); router.push("/orders") }}>
-                <ReceiptText className="w-4 h-4" />
-                <span>Tra cứu đơn</span>
+              <DropdownMenuItem asChild>
+                <Link href="/orders" className="inline-flex items-center gap-2">
+                  <ReceiptText className="w-4 h-4" />
+                  <span>Tra cứu đơn</span>
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
