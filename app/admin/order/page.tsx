@@ -2,7 +2,7 @@
 
 
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import {
   collection,
@@ -409,31 +409,7 @@ export default function AdminOrdersPage() {
     }
   }
 
-  const exportCSV = () => {
-    const header = ["id", "name", "phone", "items", "total", "status", "createdAt"]
-    const rows = filtered.map((o) => {
-      const created = o.createdAt?.toDate ? o.createdAt.toDate().toISOString() : ""
-      const total = Number(o?.pricing?.total || 0)
-      const csv = [
-        o.id,
-        o.customer?.name || "",
-        o.customer?.phone || "",
-        String(o.items?.length || 0),
-        String(total),
-        o.fulfillment?.status || "",
-        created
-      ]
-      return csv.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
-    })
-    const csv = [header.join(","), ...rows].join("\n")
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `orders-${Date.now()}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  
 
   // 1 trang với tabs nội bộ
   return (
