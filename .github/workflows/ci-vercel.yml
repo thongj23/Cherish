@@ -90,7 +90,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
       - run: |
           echo "🚀🚀🚀 Deploying PRODUCTION"
           npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
