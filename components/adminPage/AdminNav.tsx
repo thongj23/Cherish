@@ -3,15 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ReceiptText, Home, ShoppingCart, LogOut, QrCode, FilePlus, BarChart3 } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
+import { ReceiptText, Home, ShoppingCart, LogOut, BarChart3, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function AdminNav() {
@@ -20,9 +12,9 @@ export default function AdminNav() {
 
   const handleLogout = () => {
     localStorage.removeItem("isAdminLoggedIn")
-    fetch('/api/admin-logout', { method: 'POST' }).finally(() => {
-      router.push("/admin")
-    })
+
+    router.push("/admin") 
+
   }
 
   return (
@@ -51,54 +43,31 @@ export default function AdminNav() {
             </Button>
           </Link>
 
-          {/* (Đã bỏ Hóa đơn) */}
 
-          {/* Đơn hàng (gom nhóm) */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant={
-                  pathname.startsWith("/admin/order") ||
-                  pathname.startsWith("/order") ||
-                  pathname.startsWith("/scan") ||
-                  pathname.startsWith("/orders")
-                    ? "default"
-                    : "outline"
-                }
-                className="transition-all"
-              >
-                <ShoppingCart className="w-4 h-4 mr-2" /> Đơn hàng
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>Đơn hàng</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/admin/order" className="inline-flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4" />
-                  <span>Quản lý đơn</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/order" className="inline-flex items-center gap-2">
-                  <FilePlus className="w-4 h-4" />
-                  <span>Tạo đơn</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/scan" className="inline-flex items-center gap-2">
-                  <QrCode className="w-4 h-4" />
-                  <span>Quét QR</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/orders" className="inline-flex items-center gap-2">
-                  <ReceiptText className="w-4 h-4" />
-                  <span>Tra cứu đơn</span>
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+         
+
+          {/* Đơn hàng */}
+          <Link href="/admin/order">
+            <Button
+              variant={pathname.startsWith("/admin/order") ? "default" : "outline"}
+              className={cn("transition-all", pathname.startsWith("/admin/order") && "font-semibold")}
+            >
+              <ShoppingCart className="w-4 h-4 mr-2" />
+              Đơn hàng
+            </Button>
+          </Link>
+
+          {/* Feedback */}
+          <Link href="/admin/feedback">
+            <Button
+              variant={pathname.startsWith("/admin/feedback") ? "default" : "outline"}
+              className={cn("transition-all", pathname.startsWith("/admin/feedback") && "font-semibold")}
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Feedback
+            </Button>
+          </Link>
+
         </div>
 
         {/* Nút Đăng xuất */}
