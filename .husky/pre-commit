@@ -1,7 +1,14 @@
 #!/usr/bin/env sh
 # husky
 
-# Skip if Node or npm are not available in PATH (e.g., some Git GUIs on Windows)
+# On Windows, npm may spawn in a different shell without Node in PATH.
+# To be safe, skip lint automatically on Windows; run lint manually instead.
+if [ "$OS" = "Windows_NT" ]; then
+  echo "Windows detected; skipping pre-commit lint"
+  exit 0
+fi
+
+# Skip if Node or npm are not available in PATH (e.g., some Git GUIs)
 if ! command -v node >/dev/null 2>&1; then
   echo "Node.js not found in PATH; skipping lint"
   exit 0
