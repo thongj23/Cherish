@@ -12,7 +12,9 @@ export default function AdminNav() {
 
   const handleLogout = () => {
     localStorage.removeItem("isAdminLoggedIn")
+
     router.push("/admin") 
+
   }
 
   return (
@@ -41,6 +43,7 @@ export default function AdminNav() {
             </Button>
           </Link>
 
+
          
 
           {/* Đơn hàng */}
@@ -64,6 +67,7 @@ export default function AdminNav() {
               Feedback
             </Button>
           </Link>
+
         </div>
 
         {/* Nút Đăng xuất */}

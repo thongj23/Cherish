@@ -70,10 +70,8 @@ export const saveScan = onRequest(async (req, res) => {
     name = parsed.name ?? null
     phone = parsed.phone ?? null
     email = parsed.email ?? null
-    // If there is extra info, keep original raw as note as well
     note = parsed.note ?? null
   } else {
-    // Raw text: try to pick email/phone, store all as note
     email = extractEmail(raw)
     phone = extractPhone(raw)
     note = raw
@@ -91,6 +89,7 @@ export const saveScan = onRequest(async (req, res) => {
   const ref = await db.collection("scans").add(doc)
   res.status(200).json({ ok: true, id: ref.id })
 })
+
 
 function dayKeyFromMillis(ms: number) {
   const d = new Date(ms)
@@ -183,3 +182,4 @@ export const aggregateOrderUpdated = onDocumentUpdated("orders/{id}", async (eve
 
   await batch.commit()
 })
+
