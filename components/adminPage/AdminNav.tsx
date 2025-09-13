@@ -3,7 +3,9 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+
 import { Home, ShoppingCart, LogOut, BarChart3 } from "lucide-react"
+
 import { cn } from "@/lib/utils"
 
 export default function AdminNav() {
@@ -12,9 +14,9 @@ export default function AdminNav() {
 
   const handleLogout = () => {
     localStorage.removeItem("isAdminLoggedIn")
-    fetch('/api/admin-logout', { method: 'POST' }).finally(() => {
-      router.push("/admin")
-    })
+
+    router.push("/admin") 
+
   }
 
   return (
@@ -45,6 +47,7 @@ export default function AdminNav() {
             </Link>
           </Button>
 
+
           {/* Đơn hàng (1 trang) */}
           <Button
             asChild
@@ -57,6 +60,7 @@ export default function AdminNav() {
               Đơn hàng
             </Link>
           </Button>
+
         </div>
 
         {/* Nút Đăng xuất */}

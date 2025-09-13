@@ -14,10 +14,14 @@ interface TableImgProps {
 export default function TableImg({ onUpload, onSelect }: TableImgProps) {
   const images = useImages()
 
-  const handleUpload = async () => {
-const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!
-const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || ""
+  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || ""
 
+  const handleUpload = async () => {
+    if (!cloudName || !uploadPreset) {
+      alert("Thiếu cấu hình Cloudinary (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME / NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET)")
+      return
+    }
 
     const myWidget = (window as any).cloudinary.createUploadWidget(
       {
@@ -59,16 +63,22 @@ const deleteImage = async (id: string) => {
     console.error("Error deleting:", err)
   }
 }
+  const disabled = !cloudName || !uploadPreset
+
   return (
     <div className="space-y-4">
       <button
         type="button"
         onClick={handleUpload}
-        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+        disabled={disabled}
+        className={`flex items-center px-4 py-2 rounded-md transition text-white ${disabled ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
       >
         <UploadCloud className="w-4 h-4 mr-2" />
         Upload ảnh mới
       </button>
+      {disabled && (
+        <p className="text-xs text-gray-600">Vui lòng cấu hình Cloudinary để bật upload.</p>
+      )}
 
       <div className="grid grid-cols-3 gap-4">
      {images.map((img) => (
