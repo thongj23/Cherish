@@ -3,7 +3,9 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ReceiptText, Home, ShoppingCart, LogOut, BarChart3, MessageSquare } from "lucide-react"
+
+import { Home, ShoppingCart, LogOut, BarChart3 } from "lucide-react"
+
 import { cn } from "@/lib/utils"
 
 export default function AdminNav() {
@@ -22,51 +24,42 @@ export default function AdminNav() {
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <div className="flex gap-3 flex-wrap items-center">
           {/* Trang chủ */}
-          <Link href="/admin">
-            <Button
-              variant={pathname === "/admin" ? "default" : "outline"}
-              className={cn("transition-all", pathname === "/admin" && "font-semibold")}
-            >
+          <Button
+            asChild
+            variant={pathname === "/admin" ? "default" : "outline"}
+            className={cn(pathname === "/admin" && "font-semibold")}
+          >
+            <Link href="/admin" prefetch={false}>
               <Home className="w-4 h-4 mr-2" />
               Trang chủ
-            </Button>
-          </Link>
+            </Link>
+          </Button>
 
           {/* Thống kê */}
-          <Link href="/admin/stats">
-            <Button
-              variant={pathname.startsWith("/admin/stats") ? "default" : "outline"}
-              className={cn("transition-all", pathname.startsWith("/admin/stats") && "font-semibold")}
-            >
+          <Button
+            asChild
+            variant={pathname.startsWith("/admin/stats") ? "default" : "outline"}
+            className={cn(pathname.startsWith("/admin/stats") && "font-semibold")}
+          >
+            <Link href="/admin/stats" prefetch={false}>
               <BarChart3 className="w-4 h-4 mr-2" />
               Thống kê
-            </Button>
-          </Link>
+            </Link>
+          </Button>
 
 
-         
-
-          {/* Đơn hàng */}
-          <Link href="/admin/order">
-            <Button
-              variant={pathname.startsWith("/admin/order") ? "default" : "outline"}
-              className={cn("transition-all", pathname.startsWith("/admin/order") && "font-semibold")}
-            >
+          {/* Đơn hàng (1 trang) */}
+          <Button
+            asChild
+            variant={
+              pathname.startsWith("/admin/order") ? "default" : "outline"
+            }
+          >
+            <Link href="/admin/order" prefetch={false}>
               <ShoppingCart className="w-4 h-4 mr-2" />
               Đơn hàng
-            </Button>
-          </Link>
-
-          {/* Feedback */}
-          <Link href="/admin/feedback">
-            <Button
-              variant={pathname.startsWith("/admin/feedback") ? "default" : "outline"}
-              className={cn("transition-all", pathname.startsWith("/admin/feedback") && "font-semibold")}
-            >
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Feedback
-            </Button>
-          </Link>
+            </Link>
+          </Button>
 
         </div>
 

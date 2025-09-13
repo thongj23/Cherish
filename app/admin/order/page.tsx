@@ -42,7 +42,7 @@ type AdminOrder = {
   archived?: boolean
 }
 
-type TabType = "manage" | "create" | "scan" | "lookup"
+type TabType = "manage" | "create" | "scan"
 
 const STATUS_OPTIONS = [
   { value: "pending", label: "Đang xử lý" },
@@ -435,80 +435,24 @@ export default function AdminOrdersPage() {
     URL.revokeObjectURL(url)
   }
 
-  // Map cho iframe tabs
-  const TAB_MAP: Record<Exclude<TabType, "manage">, { src: string; title: string; h: string }> = {
-    create: { src: "/order", title: "Tạo đơn", h: "h-[1400px]" },
-    scan: { src: "/scan", title: "Quét QR", h: "h-[900px]" },
-    lookup: { src: "/orders", title: "Tra cứu đơn", h: "h-[800px]" }
-  }
-
-  // Early render cho non-manage tab
-switch (tab) {
-  case "manage":
-    return (
-      <div className="space-y-4">
-        {/* Nội dung tab manage ở đây */}
-      </div>
-    )
-  case "create":
-    return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Tạo đơn</h1>
-        <iframe src="/order" className="w-full h-[1400px]" title="Tạo đơn" />
-      </div>
-    )
-  case "scan":
-    return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Quét QR</h1>
-        <iframe src="/scan" className="w-full h-[900px]" title="Quét QR" />
-      </div>
-    )
-  case "lookup":
-    return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Tra cứu đơn</h1>
-        <iframe src="/orders" className="w-full h-[800px]" title="Tra cứu đơn" />
-      </div>
-    )
-}
-
-
-  // Tab "manage"
+  // 1 trang với tabs nội bộ
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 justify-between">
-        <h1 className="text-2xl font-bold">Quản lý đơn hàng</h1>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setShowScanner((v) => !v)}>
-            <QrCode className="w-4 h-4 mr-1" /> {showScanner ? "Ẩn quét QR" : "Quét QR"}
-          </Button>
-          <Link href="/order">
-            <Button variant="outline">Tạo đơn</Button>
-          </Link>
+
+        <h1 className="text-2xl font-bold">Đơn hàng</h1>
+        <div className="flex gap-2">
+          <Button variant={tab === "manage" ? "default" : "outline"} onClick={() => setTab("manage")}>Quản lý</Button>
+          <Button variant={tab === "create" ? "default" : "outline"} onClick={() => setTab("create")}>Tạo đơn</Button>
+          <Button variant={tab === "scan" ? "default" : "outline"} onClick={() => setTab("scan")}>Quét QR</Button>
         </div>
       </div>
 
-      {showScanner && (
-        <Card className="p-3 border-purple-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <div id="qr-reader-admin" ref={scannerRef} className="w-full" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm text-gray-700">Nội dung</label>
-              <TextInput value={raw} onChange={(e) => setRaw(e.target.value)} placeholder="Dán/nhập nội dung tại đây" />
-              <div className="flex gap-2">
-                <Button onClick={submitScan} disabled={submitting}>{submitting ? "Đang gửi..." : "Gửi"}</Button>
-                <Button variant="ghost" onClick={() => { setRaw(""); setScanMsg(null) }}>Xóa</Button>
-              </div>
-              {scanMsg && <p className="text-sm text-gray-700">{scanMsg}</p>}
-            </div>
-          </div>
-        </Card>
-      )}
+      {tab === "manage" ? (
+        <>
+          {/* Filter */}
+          <div className="bg-white p-4 rounded-lg border shadow-sm">
 
-      <div className="bg-white p-4 rounded-lg border shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
           <Input ref={searchRef} placeholder="Tìm theo mã đơn / tên / SĐT (/)" value={rawSearch} onChange={(e) => setRawSearch(e.target.value)} className="flex-1 min-w-[220px]" />
 
@@ -564,8 +508,8 @@ switch (tab) {
         </div>
       </div>
 
-      {/* Table */}
-      {loading ? (
+          {/* Table */}
+          {loading ? (
         <div className="rounded-lg border overflow-hidden bg-white">
           <div className="divide-y">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -578,7 +522,7 @@ switch (tab) {
             ))}
           </div>
         </div>
-      ) : filtered.length === 0 ? (
+          ) : filtered.length === 0 ? (
         // Hiển thị mock data thay vì text trống
         <div className="rounded-lg border overflow-hidden bg-white shadow-sm">
           <Table>
@@ -608,7 +552,7 @@ switch (tab) {
             </TableBody>
           </Table>
         </div>
-      ) : (
+          ) : (
         // Hiển thị dữ liệu thật
         <div className="rounded-lg border overflow-hidden bg-white shadow-sm">
           <Table>
@@ -724,7 +668,19 @@ switch (tab) {
             </div>
           )}
         </div>
-      )}
+          )}
+        </>
+      ) : tab === "create" ? (
+        <div className="space-y-4">
+          <h1 className="text-2xl font-bold">Tạo đơn</h1>
+          <iframe src="/order?embed=1" className="w-full h-[1400px]" title="Tạo đơn" />
+        </div>
+      ) : tab === "scan" ? (
+        <div className="space-y-4">
+          <h1 className="text-2xl font-bold">Quét QR</h1>
+          <iframe src="/scan" className="w-full h-[900px]" title="Quét QR" />
+        </div>
+      ) : null}
     </div>
   )
 }
