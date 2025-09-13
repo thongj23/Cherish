@@ -6,6 +6,7 @@ import ProductFormDialog from "@/components/adminPage/ProductFormDialog"
 import useAdminProducts from "@/hooks/useAdminProducts"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import Image from "next/image"
+import FeedbackAdmin from "@/components/adminPage/FeedbackAdmin"
 
 export default function AdminPage() {
   const {
@@ -66,6 +67,9 @@ export default function AdminPage() {
         handleDelete={handleDelete}
         handleChangeStatus={handleChangeStatus}
       />
+
+      {/* Feedback quản lý */}
+      <FeedbackAdmin />
 
       {/* Product Form Dialog */}
       <ProductFormDialog

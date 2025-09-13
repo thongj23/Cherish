@@ -3,15 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ReceiptText, Home, ShoppingCart, LogOut, QrCode, FilePlus, BarChart3 } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
+import { Home, ShoppingCart, LogOut, BarChart3 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function AdminNav() {
@@ -30,75 +22,41 @@ export default function AdminNav() {
       <div className="flex flex-wrap gap-3 items-center justify-between">
         <div className="flex gap-3 flex-wrap items-center">
           {/* Trang chủ */}
-          <Link href="/admin">
-            <Button
-              variant={pathname === "/admin" ? "default" : "outline"}
-              className={cn("transition-all", pathname === "/admin" && "font-semibold")}
-            >
+          <Button
+            asChild
+            variant={pathname === "/admin" ? "default" : "outline"}
+            className={cn(pathname === "/admin" && "font-semibold")}
+          >
+            <Link href="/admin" prefetch={false}>
               <Home className="w-4 h-4 mr-2" />
               Trang chủ
-            </Button>
-          </Link>
+            </Link>
+          </Button>
 
           {/* Thống kê */}
-          <Link href="/admin/stats">
-            <Button
-              variant={pathname.startsWith("/admin/stats") ? "default" : "outline"}
-              className={cn("transition-all", pathname.startsWith("/admin/stats") && "font-semibold")}
-            >
+          <Button
+            asChild
+            variant={pathname.startsWith("/admin/stats") ? "default" : "outline"}
+            className={cn(pathname.startsWith("/admin/stats") && "font-semibold")}
+          >
+            <Link href="/admin/stats" prefetch={false}>
               <BarChart3 className="w-4 h-4 mr-2" />
               Thống kê
-            </Button>
-          </Link>
+            </Link>
+          </Button>
 
-          {/* (Đã bỏ Hóa đơn) */}
-
-          {/* Đơn hàng (gom nhóm) */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant={
-                  pathname.startsWith("/admin/order") ||
-                  pathname.startsWith("/order") ||
-                  pathname.startsWith("/scan") ||
-                  pathname.startsWith("/orders")
-                    ? "default"
-                    : "outline"
-                }
-                className="transition-all"
-              >
-                <ShoppingCart className="w-4 h-4 mr-2" /> Đơn hàng
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>Đơn hàng</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/admin/order" className="inline-flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4" />
-                  <span>Quản lý đơn</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/order" className="inline-flex items-center gap-2">
-                  <FilePlus className="w-4 h-4" />
-                  <span>Tạo đơn</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/scan" className="inline-flex items-center gap-2">
-                  <QrCode className="w-4 h-4" />
-                  <span>Quét QR</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/orders" className="inline-flex items-center gap-2">
-                  <ReceiptText className="w-4 h-4" />
-                  <span>Tra cứu đơn</span>
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Đơn hàng (1 trang) */}
+          <Button
+            asChild
+            variant={
+              pathname.startsWith("/admin/order") ? "default" : "outline"
+            }
+          >
+            <Link href="/admin/order" prefetch={false}>
+              <ShoppingCart className="w-4 h-4 mr-2" />
+              Đơn hàng
+            </Link>
+          </Button>
         </div>
 
         {/* Nút Đăng xuất */}

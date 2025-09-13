@@ -7,6 +7,8 @@ import { db } from "@/lib/firebase"
 import ProfileSection from "@/components/bio/ProfileSection"
 import SocialLinks from "@/components/bio/SocialLinks"
 import ProductGrid from "@/components/bio/ProductGrid"
+import FeedbackGallery from "@/components/bio/FeedbackGallery"
+import CursorTrail from "@/components/bio/CursorTrail"
 import { Product } from "@/types/product/product"
 import { ArrowUp } from "lucide-react" 
 
@@ -84,9 +86,23 @@ export default function BioPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
+      <CursorTrail />
       <motion.div
         style={{ y: bgY, scale: 1.03 }}
         className="absolute inset-0 z-0 bg-[url('/images/bg02.jpg')] bg-cover bg-center bg-no-repeat opacity-80 will-change-transform"
+      />
+      {/* animated soft blobs for subtle motion */}
+      <motion.div
+        initial={{ x: -80, y: -20, opacity: 0.6 }}
+        animate={{ x: [ -80, 80, -80 ], y: [ -20, 40, -20 ] }}
+        transition={{ duration: 26, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+        className="pointer-events-none absolute -left-10 top-16 z-0 w-72 h-72 rounded-full bg-purple-400/25 blur-3xl"
+      />
+      <motion.div
+        initial={{ x: 60, y: 120, opacity: 0.5 }}
+        animate={{ x: [ 60, -60, 60 ], y: [ 120, 40, 120 ] }}
+        transition={{ duration: 28, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }}
+        className="pointer-events-none absolute right-6 bottom-20 z-0 w-80 h-80 rounded-full bg-pink-300/25 blur-3xl"
       />
 
       <motion.div
@@ -101,6 +117,7 @@ export default function BioPage() {
           <p className="text-red-600 text-sm mb-4 text-center">{error}</p>
         )}
         <ProductGrid products={products} loading={loading} />
+        <FeedbackGallery />
       </motion.div>
 
       {/* ✅ Nút scroll to top */}
