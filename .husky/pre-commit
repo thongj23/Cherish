@@ -1,5 +1,18 @@
 #!/usr/bin/env sh
 # husky
 
+# Skip if Node or npm are not available in PATH (e.g., some Git GUIs on Windows)
+if ! command -v node >/dev/null 2>&1; then
+  echo "Node.js not found in PATH; skipping lint"
+  exit 0
+fi
+if ! command -v npm >/dev/null 2>&1; then
+  echo "npm not found in PATH; skipping lint"
+  exit 0
+fi
+
 echo "Running pre-commit checks (lint only)"
-npm run lint
+npm run lint || {
+  echo "Lint failed; aborting commit"
+  exit 1
+}
