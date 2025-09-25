@@ -1,4 +1,5 @@
-import { collection, addDoc, getDocs, deleteDoc } from "firebase/firestore"
+import { initializeApp } from "firebase/app"
+import { getFirestore, collection, addDoc, getDocs, deleteDoc } from "firebase/firestore"
 import { readFile } from "node:fs/promises"
 
 // A few sample portrait images suitable for 3:4 cards
@@ -12,8 +13,6 @@ const sampleFeedbacks = [
   "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=480&h=640&fit=crop",
   "https://images.unsplash.com/photo-1548946526-f69e2424cf45?w=480&h=640&fit=crop",
 ]
-
-let db
 
 async function ensureEnv() {
   // Attempt to load ../.env manually so the client SDK config exists in Node
@@ -31,16 +30,22 @@ async function ensureEnv() {
   } catch {}
 }
 
-async function getDb() {
-  if (!db) {
-    await ensureEnv()
-    ;({ db } = await import("../lib/firebase.js"))
+function getDb() {
+  const firebaseConfig = {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   }
-  return db
+  const app = initializeApp(firebaseConfig)
+  return getFirestore(app)
 }
 
 async function clearFeedbacks() {
-  const dbi = await getDb()
+  await ensureEnv()
+  const dbi = getDb()
   const col = collection(dbi, "feedbacks")
   const snap = await getDocs(col)
   await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)))
@@ -51,7 +56,8 @@ async function seedFeedbacks() {
     console.log("Seeding feedbacks…")
     await clearFeedbacks()
 
-    const dbi = await getDb()
+    await ensureEnv()
+    const dbi = getDb()
     const col = collection(dbi, "feedbacks")
     const now = Date.now()
     let i = 0

@@ -39,6 +39,7 @@ export default function AdminWrapper({ children }: AdminWrapperProps) {
       if (data.success) {
         localStorage.setItem("isAdminLoggedIn", "true")
         setIsAuthenticated(true)
+        window.dispatchEvent(new Event("admin-auth-change"))
       } else {
         alert("Sai mật khẩu!")
       }
@@ -52,8 +53,11 @@ export default function AdminWrapper({ children }: AdminWrapperProps) {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow-md w-full max-w-sm space-y-4">
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
+        <form
+          onSubmit={handleSubmit}
+          className="w-full max-w-sm space-y-5 rounded-xl bg-white p-8 shadow-md"
+        >
           <h1 className="text-xl font-bold text-center">Nhập mật khẩu quản trị</h1>
           <Input
             type="password"

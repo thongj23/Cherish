@@ -1,16 +1,32 @@
 "use client"
 
-import ProductTable from "@/components/adminPage/ProductTable"
-import AdminHeader from "@/components/adminPage/AdminHeader"
-import ProductFormDialog from "@/components/adminPage/ProductFormDialog"
-import useAdminProducts from "@/hooks/useAdminProducts"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import dynamic from "next/dynamic"
 import Image from "next/image"
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import ProductManagementHeader from "@/features/products/components/ProductManagementHeader"
+import ProductTable from "@/features/products/components/ProductTable"
+import useAdminProducts from "@/features/products/hooks/useAdminProducts"
+
+const ProductFormDialog = dynamic(
+  () => import("@/features/products/components/ProductFormDialog"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-lg border border-dashed border-purple-200 bg-white p-6 text-center text-sm text-purple-600">
+        Đang tải biểu mẫu sản phẩm...
+      </div>
+    ),
+  },
+)
 
 export default function AdminPage() {
   const {
     products,
     loading,
+    loadingMore,
+    hasMore,
+    error,
     isDialogOpen,
     setIsDialogOpen,
     editingProduct,
@@ -22,6 +38,7 @@ export default function AdminPage() {
     setIsImageModalOpen,
     selectedImages,
     openImageModal,
+    loadMoreProducts,
   } = useAdminProducts()
 
   // Convert Product to ProductFormData for editing
@@ -49,7 +66,7 @@ export default function AdminPage() {
   return (
     <div className="space-y-6">
       {/* Header quản lý sản phẩm */}
-      <AdminHeader
+      <ProductManagementHeader
         onAddProduct={() => handleEdit(null)}
         onViewImages={openImageModal}
         productCount={products.length}
@@ -62,6 +79,10 @@ export default function AdminPage() {
       <ProductTable
         products={products}
         loading={loading}
+        loadingMore={loadingMore}
+        hasMore={hasMore}
+        errorMessage={error}
+        onLoadMore={loadMoreProducts}
         handleEdit={handleEdit}
         handleDelete={handleDelete}
         handleChangeStatus={handleChangeStatus}

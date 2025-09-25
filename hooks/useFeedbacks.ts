@@ -12,9 +12,9 @@ export default function useFeedbacks(publishedOnly = true) {
   useEffect(() => {
     let mounted = true
     ;(async () => {
+      const base = collection(db, "feedbacks")
       try {
         setLoading(true)
-        const base = collection(db, "feedbacks")
         const q = publishedOnly
           ? query(base, where("published", "==", true), orderBy("createdAt", "desc"))
           : query(base, orderBy("createdAt", "desc"))
