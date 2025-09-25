@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { collection, getDocs } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Input } from "@/components/ui/input"
@@ -25,8 +26,17 @@ type Item = {
   imageUrl?: string | null
 }
 
-export default function OrderPage() {
+function OrderPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const embedded = useMemo(() => {
+    const viaQuery = searchParams?.get("embed") === "1" || searchParams?.has("embed")
+    let viaIframe = false
+    if (typeof window !== 'undefined') {
+      try { viaIframe = window.self !== window.top } catch { viaIframe = true }
+    }
+    return Boolean(viaQuery || viaIframe)
+  }, [searchParams])
   const [customer, setCustomer] = useState({
     name: "",
     phone: "",
@@ -40,17 +50,26 @@ export default function OrderPage() {
     { name: "", category: "Dep", subCategory: "", size: null, quantity: 1, price: null },
   ])
   const [saving, setSaving] = useState(false)
+  const [region, setRegion] = useState<"HCM" | "HN" | "TINH">("HCM")
+  const [autoShip, setAutoShip] = useState(true)
+  const [freeShipThreshold, setFreeShipThreshold] = useState<number>(300000)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [productSearch, setProductSearch] = useState("")
   const [shippingFee, setShippingFee] = useState<number>(0)
 
+  // --
+
+  // Only load products when the picker is opened the first time
   useEffect(() => {
-    const load = async () => {
+    if (!pickerOpen || products.length > 0) return
+    let cancelled = false
+    ;(async () => {
       try {
         setLoadingProducts(true)
         const snap = await getDocs(collection(db, "products"))
+        if (cancelled) return
         const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as Product[]
         const visible = list.filter((p) => {
           const st = String(p.status || "").toLowerCase().trim()
@@ -62,20 +81,31 @@ export default function OrderPage() {
       } finally {
         setLoadingProducts(false)
       }
+    })()
+    return () => {
+      cancelled = true
     }
-    load()
-  }, [])
+  }, [pickerOpen, products.length])
 
   const filteredProducts = useMemo(() => {
+    if (!pickerOpen) return []
     const q = productSearch.toLowerCase().trim()
     if (!q) return products
     return products.filter((p) =>
       (p.name || "").toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q)
     )
-  }, [productSearch, products])
+  }, [productSearch, products, pickerOpen])
 
   const subtotal = items.reduce((sum, it) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 0), 0)
   const total = subtotal + (Number(shippingFee) || 0)
+
+  useEffect(() => {
+    if (!autoShip) return
+    const preset: Record<string, number> = { HCM: 15000, HN: 20000, TINH: 30000 }
+    const base = preset[region]
+    const fee = subtotal >= freeShipThreshold ? 0 : base
+    setShippingFee(fee)
+  }, [region, subtotal, freeShipThreshold, autoShip])
 
   const updateItem = (index: number, patch: Partial<Item>) => {
     setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)))
@@ -143,13 +173,15 @@ export default function OrderPage() {
 
   return (
     <>
-      <AdminNav />
+      {!embedded && <AdminNav />}
       <div className="px-4 py-6 max-w-xl mx-auto">
-        <div className="flex items-center gap-2 mb-3">
-          <Button variant="outline" size="sm" onClick={() => router.back()} className="inline-flex items-center">
-            <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
-          </Button>
-        </div>
+        {!embedded && (
+          <div className="flex items-center gap-2 mb-3">
+            <Button variant="outline" size="sm" onClick={() => router.back()} className="inline-flex items-center">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
+            </Button>
+          </div>
+        )}
         <h1 className="text-xl font-semibold text-gray-900 mb-4 text-center">Đặt hàng</h1>
 
       {/* Customer */}
@@ -250,16 +282,40 @@ export default function OrderPage() {
           <span>Tạm tính</span>
           <strong>{subtotal.toLocaleString("vi-VN")}đ</strong>
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="text-sm text-gray-700 flex items-center justify-between gap-3">
+            <span>Khu vực giao</span>
+            <Select value={region} onValueChange={(v: any) => setRegion(v)}>
+              <SelectTrigger className="w-40 h-8"><SelectValue placeholder="Khu vực" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="HCM">TP.HCM</SelectItem>
+                <SelectItem value="HN">Hà Nội</SelectItem>
+                <SelectItem value="TINH">Tỉnh</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="text-sm text-gray-700 flex items-center justify-between gap-3">
+            <span>Miễn phí từ</span>
+            <div className="flex items-center gap-2">
+              <Input type="number" value={freeShipThreshold} onChange={(e) => setFreeShipThreshold(Number(e.target.value) || 0)} className="h-8 w-32 text-right" />
+              <strong className="whitespace-nowrap">đ</strong>
+            </div>
+          </div>
+        </div>
         <div className="text-sm text-gray-700 flex items-center justify-between gap-3">
-          <span>Phí giao (tự đặt)</span>
+          <span>Phí giao</span>
           <div className="flex items-center gap-2">
             <Input
               type="number"
               value={shippingFee}
               onChange={(e) => setShippingFee(Number(e.target.value) || 0)}
               className="h-8 w-28 text-right"
+              disabled={autoShip}
             />
-            <strong className="whitespace-nowrap">đ</strong>
+            <label className="text-xs flex items-center gap-2">
+              <input type="checkbox" checked={autoShip} onChange={(e) => setAutoShip(e.target.checked)} />
+              Tự tính theo khu vực/ngưỡng
+            </label>
           </div>
         </div>
         <div className="text-base flex items-center justify-between">
@@ -272,6 +328,7 @@ export default function OrderPage() {
         {saving ? "Đang tạo đơn..." : "Đặt hàng"}
       </Button>
       {/* Product Picker */}
+      {pickerOpen && (
       <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -308,7 +365,7 @@ export default function OrderPage() {
                       className="w-full text-left border rounded-lg p-2 hover:bg-gray-50 flex items-center gap-3"
                     >
                       <div className="relative w-12 h-12 rounded-md overflow-hidden bg-white ring-1 ring-gray-200 flex-shrink-0">
-                        <Image src={p.imageUrl || "/placeholder.svg"} alt={p.name} fill className="object-cover" />
+                        <Image src={p.imageUrl || "/placeholder.svg"} alt={p.name} fill className="object-cover" loading="lazy" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="truncate font-medium">{p.name}</div>
@@ -323,7 +380,16 @@ export default function OrderPage() {
           </div>
         </DialogContent>
       </Dialog>
+      )}
       </div>
     </>
+  )
+}
+
+export default function OrderPage() {
+  return (
+    <Suspense fallback={<div className="px-4 py-6 max-w-xl mx-auto text-sm text-gray-600">Đang tải...</div>}>
+      <OrderPageInner />
+    </Suspense>
   )
 }

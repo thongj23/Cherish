@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
@@ -14,11 +14,30 @@ export default function ScanPage() {
   const [raw, setRaw] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
-  const [cameraError, setCameraError] = useState<string | null>(null)
+  const [scanId, setScanId] = useState<string | null>(null)
   const scannerRef = useRef<HTMLDivElement | null>(null)
   const scannerInstance = useRef<any>(null)
 
   const functionUrl = process.env.NEXT_PUBLIC_FUNCTION_SAVE_SCAN_URL || ""
+
+  // Try parse QR content as JSON to detect an order/invoice object
+  const parsed = useMemo(() => {
+    try {
+      const obj = JSON.parse(raw)
+      if (obj && typeof obj === "object") return obj
+      return null
+    } catch {
+      return null
+    }
+  }, [raw])
+
+  const isOrderObject = useMemo(() => {
+    if (!parsed) return false
+    // Accept either { customer, items } or flat { name, phone, items }
+    const hasCustomerItems = parsed.customer && Array.isArray(parsed.items)
+    const hasFlatItems = (parsed.name || parsed.phone) && Array.isArray(parsed.items)
+    return !!(hasCustomerItems || hasFlatItems)
+  }, [parsed])
 
   useEffect(() => {
     // Load html5-qrcode only on client
@@ -45,17 +64,14 @@ export default function ScanPage() {
           const onSuccess = (decodedText: string) => {
             setRaw(decodedText)
             setMessage("Đã đọc mã – kiểm tra và bấm Gửi")
-            setCameraError(null)
           }
-          const onError = (err: unknown) => {
-            setCameraError("Không thể nhận diện mã. Kiểm tra ánh sáng hoặc lau sạch camera.")
-            console.debug("scan error", err)
+          const onError = () => {
+            // ignore scan errors to keep UI calm
           }
           scannerInstance.current.render(onSuccess, onError)
         }
       } catch (err) {
         console.error("QR scanner load error", err)
-        setCameraError("Không thể khởi động máy quét. Kiểm tra quyền truy cập camera.")
       }
     })()
     return () => {
@@ -71,15 +87,11 @@ export default function ScanPage() {
       setMessage("Vui lòng quét mã hoặc nhập nội dung")
       return
     }
-    if (!functionUrl) {
-      setMessage("Thiếu URL Cloud Function (NEXT_PUBLIC_FUNCTION_SAVE_SCAN_URL)")
-      return
-    }
     setSubmitting(true)
     setMessage(null)
-    setCameraError(null)
     try {
-      const res = await fetch(functionUrl, {
+      const endpoint = functionUrl || '/api/save-scan'
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ raw, source: "web" }),
@@ -88,8 +100,57 @@ export default function ScanPage() {
       if (!res.ok) {
         throw new Error(data?.message || "Gửi thất bại")
       }
-      setMessage("Đã lưu thành công")
-      setRaw("")
+      if (data?.id) setScanId(String(data.id))
+      setMessage("Đã lưu bản quét thành công")
+    } catch (err: any) {
+      setMessage(err?.message || "Có lỗi xảy ra")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleCreateOrderFromQR = async () => {
+    if (!isOrderObject || !parsed) return
+    setSubmitting(true)
+    setMessage(null)
+    try {
+      // Nếu chưa có scanId thì lưu bản quét trước để liên kết
+      let sid = scanId
+      if (!sid) {
+        const endpoint = functionUrl || '/api/save-scan'
+        const resScan = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ raw, source: 'web' }) })
+        const dataScan = await resScan.json().catch(() => ({}))
+        if (resScan.ok && dataScan?.id) sid = String(dataScan.id)
+        setScanId(sid || null)
+      }
+      // Normalize payload for /api/orders
+      const customer = parsed.customer
+        ? parsed.customer
+        : { name: parsed.name || "", phone: parsed.phone || "", email: parsed.email || null, address: parsed.address || null }
+      const items = Array.isArray(parsed.items) ? parsed.items : []
+      // If pricing not provided, compute simple subtotal
+      const subtotal = items.reduce((s: number, it: any) => s + (Number(it?.price) || 0) * (Number(it?.quantity) || 0), 0)
+      const shippingFee = Number(parsed?.pricing?.shippingFee || 0)
+      const discount = Number(parsed?.pricing?.discount || 0)
+      const total = Number(parsed?.pricing?.total || subtotal + shippingFee - discount)
+
+      const payload = {
+        customer,
+        items,
+        pricing: { subtotal, shippingFee, discount, total, currency: "VND" },
+        fulfillment: parsed.fulfillment || { method: "delivery", status: "pending" },
+        payment: parsed.payment || { method: "cod", status: "unpaid" },
+        meta: { ...(parsed.meta || {}), source: "qr", scanId: sid || null },
+      }
+
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.message || "Tạo đơn thất bại")
+      setMessage("Đã tạo đơn hàng từ QR")
     } catch (err: any) {
       setMessage(err?.message || "Có lỗi xảy ra")
     } finally {
@@ -107,24 +168,9 @@ export default function ScanPage() {
       </div>
       <h1 className="text-xl font-semibold text-gray-900 mb-4 text-center">Quét QR hoặc nhập tay</h1>
 
-      <div className="mb-4 rounded-lg border border-purple-100 bg-purple-50 px-4 py-3 text-sm text-purple-700">
-        <p className="font-medium">Mẹo quét nhanh:</p>
-        <ul className="mt-2 list-inside list-disc space-y-1">
-          <li>Giữ điện thoại cách mã từ 15 – 20cm và đảm bảo đủ ánh sáng.</li>
-          <li>Nếu camera không khởi động, kiểm tra quyền truy cập trong trình duyệt.</li>
-          <li>Có thể nhập thủ công ở ô phía dưới nếu cần.</li>
-        </ul>
-      </div>
-
       <Card className="p-3 mb-4">
         <div id="qr-reader" ref={scannerRef} className="w-full" />
       </Card>
-
-      {cameraError && (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700" role="alert">
-          {cameraError}
-        </div>
-      )}
 
       <div className="space-y-2">
         <label className="text-sm text-gray-700">Nội dung</label>
@@ -133,14 +179,36 @@ export default function ScanPage() {
           onChange={(e) => setRaw(e.target.value)}
           placeholder="Dán/nhập nội dung tại đây"
         />
-        <Button onClick={handleSubmit} disabled={submitting} className="w-full">
-          {submitting ? "Đang gửi..." : "Gửi"}
-        </Button>
-        {message && (
-          <p className="text-sm text-center text-gray-700" aria-live="polite">
-            {message}
-          </p>
+        <div className="flex gap-2">
+          <Button onClick={handleSubmit} disabled={submitting} className="w-full">
+            {submitting ? "Đang gửi..." : "Lưu bản quét"}
+          </Button>
+          {isOrderObject && (
+            <Button onClick={handleCreateOrderFromQR} disabled={submitting} className="w-full" variant="outline">
+              {submitting ? "Đang tạo..." : "Tạo đơn từ QR"}
+            </Button>
+          )}
+        </div>
+        {isOrderObject && parsed && (
+          <div className="text-xs text-gray-600 bg-gray-50 border rounded-md p-2">
+            <div><strong>Phát hiện đơn hàng:</strong> {parsed?.customer?.name || parsed?.name || "(khách)"} • {parsed?.customer?.phone || parsed?.phone || "(SĐT)"}</div>
+            <div>Sản phẩm: {Array.isArray(parsed.items) ? parsed.items.length : 0} • Tổng (ước tính):
+              {(() => {
+                try {
+                  const items = Array.isArray(parsed.items) ? parsed.items : []
+                  const subtotal = items.reduce((s: number, it: any) => s + (Number(it?.price) || 0) * (Number(it?.quantity) || 0), 0)
+                  const shippingFee = Number(parsed?.pricing?.shippingFee || 0)
+                  const discount = Number(parsed?.pricing?.discount || 0)
+                  const total = Number(parsed?.pricing?.total || subtotal + shippingFee - discount)
+                  return ` ${total.toLocaleString('vi-VN')}đ`
+                } catch {
+                  return " -"
+                }
+              })()}
+            </div>
+          </div>
         )}
+        {message && <p className="text-sm text-center text-gray-700">{message}</p>}
       </div>
     </div>
   )

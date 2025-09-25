@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic"
 import Image from "next/image"
+import FeedbackAdmin from "@/components/adminPage/FeedbackAdmin"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import ProductManagementHeader from "@/features/products/components/ProductManagementHeader"
@@ -87,6 +88,9 @@ export default function AdminPage() {
         handleDelete={handleDelete}
         handleChangeStatus={handleChangeStatus}
       />
+
+      {/* Feedback quản lý */}
+      <FeedbackAdmin />
 
       {/* Product Form Dialog */}
       <ProductFormDialog

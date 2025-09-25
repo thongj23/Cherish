@@ -43,7 +43,26 @@ const nextConfig = {
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
-  openAnalyzer: true, 
+  openAnalyzer: true,
 })
 
-module.exports = withBundleAnalyzer(nextConfig)
+let exportedConfig = withBundleAnalyzer(nextConfig)
+
+try {
+  const sentry = require("@sentry/nextjs")
+  if (sentry && typeof sentry.withSentryConfig === "function") {
+    exportedConfig = sentry.withSentryConfig(exportedConfig, {
+      org: "thong123",
+      project: "cherish",
+      silent: !process.env.CI,
+      widenClientFileUpload: true,
+      tunnelRoute: "/monitoring",
+      disableLogger: true,
+      automaticVercelMonitors: true,
+    })
+  }
+} catch (error) {
+  console.warn("Sentry config not applied:", error?.message || error)
+}
+
+module.exports = exportedConfig

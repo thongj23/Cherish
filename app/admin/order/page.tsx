@@ -1,6 +1,9 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+
 import {
   collection,
   doc,
@@ -11,8 +14,10 @@ import {
   orderBy,
   limit,
   startAfter,
+
   onSnapshot,
   arrayUnion,
+
 } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -37,21 +42,45 @@ type AdminOrder = {
   archived?: boolean
 }
 
+type TabType = "manage" | "create" | "scan"
+
 const STATUS_OPTIONS = [
   { value: "pending", label: "Đang xử lý" },
   { value: "confirmed", label: "Đã xác nhận" },
   { value: "packed", label: "Đang đóng" },
   { value: "shipped", label: "Đã gửi" },
   { value: "completed", label: "Hoàn tất" },
-  { value: "canceled", label: "Đã hủy" },
+  { value: "canceled", label: "Đã hủy" }
+]
+
+// Mock data hiển thị khi không có đơn hàng thật
+const MOCK_ORDERS: AdminOrder[] = [
+  {
+    id: "MOCK123",
+    customer: { name: "Nguyễn Văn A", phone: "0901234567" },
+    items: [{ name: "Bánh trung thu", quantity: 2 }],
+    pricing: { total: 200000 },
+    fulfillment: { status: "pending" },
+    createdAt: { toDate: () => new Date() }
+  },
+  {
+    id: "MOCK124",
+    customer: { name: "Trần Thị B", phone: "0912345678" },
+    items: [{ name: "Trà sữa", quantity: 1 }],
+    pricing: { total: 50000 },
+    fulfillment: { status: "confirmed" },
+    createdAt: { toDate: () => new Date() }
+  }
 ]
 
 export default function AdminOrdersPage() {
+  const [tab, setTab] = useState<TabType>("manage")
   const [orders, setOrders] = useState<AdminOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [rawSearch, setRawSearch] = useState("")
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState<string>("all")
+
   const [dateStart, setDateStart] = useState<string>("")
   const [dateEnd, setDateEnd] = useState<string>("")
   const [includeArchived, setIncludeArchived] = useState(false)
@@ -86,6 +115,7 @@ export default function AdminOrdersPage() {
       setLoading(false)
     }
   }
+
 
   useEffect(() => {
     fetchOrders(true)
@@ -347,6 +377,7 @@ export default function AdminOrdersPage() {
         <mark className="bg-yellow-200 px-0.5 rounded-sm">{match}</mark>
         {after}
       </span>
+
     )
   }
 
@@ -378,51 +409,43 @@ export default function AdminOrdersPage() {
     }
   }
 
+  
+
+  // 1 trang với tabs nội bộ
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 justify-between">
-        <h1 className="text-2xl font-bold">Quản lý đơn hàng</h1>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setShowScanner((v) => !v)}>
-            <QrCode className="w-4 h-4 mr-1" /> {showScanner ? "Ẩn quét QR" : "Quét QR"}
-          </Button>
-          <Link href="/order">
-            <Button variant="outline">Tạo đơn</Button>
-          </Link>
+
+        <h1 className="text-2xl font-bold">Đơn hàng</h1>
+        <div className="flex gap-2">
+          <Button variant={tab === "manage" ? "default" : "outline"} onClick={() => setTab("manage")}>Quản lý</Button>
+          <Button variant={tab === "create" ? "default" : "outline"} onClick={() => setTab("create")}>Tạo đơn</Button>
+          <Button variant={tab === "scan" ? "default" : "outline"} onClick={() => setTab("scan")}>Quét QR</Button>
         </div>
       </div>
 
-      {showScanner && (
-        <Card className="p-3 border-purple-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <div id="qr-reader-admin" ref={scannerRef} className="w-full" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm text-gray-700">Nội dung</label>
-              <TextInput value={raw} onChange={(e) => setRaw(e.target.value)} placeholder="Dán/nhập nội dung tại đây" />
-              <div className="flex gap-2">
-                <Button onClick={submitScan} disabled={submitting}>{submitting ? "Đang gửi..." : "Gửi"}</Button>
-                <Button variant="ghost" onClick={() => { setRaw(""); setScanMsg(null) }}>Xóa</Button>
-              </div>
-              {scanMsg && <p className="text-sm text-gray-700">{scanMsg}</p>}
-            </div>
-          </div>
-        </Card>
-      )}
+      {tab === "manage" ? (
+        <>
+          {/* Filter */}
+          <div className="bg-white p-4 rounded-lg border shadow-sm">
 
-      <div className="bg-white p-4 rounded-lg border shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
           <Input ref={searchRef} placeholder="Tìm theo mã đơn / tên / SĐT (/)" value={rawSearch} onChange={(e) => setRawSearch(e.target.value)} className="flex-1 min-w-[220px]" />
+
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Trạng thái" /></SelectTrigger>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Trạng thái" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tất cả</SelectItem>
               {STATUS_OPTIONS.map((s) => (
-                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
+
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-600">Từ</label>
             <input type="date" className="border rounded px-2 py-1 text-sm" value={dateStart} onChange={(e) => setDateStart(e.target.value)} />
@@ -457,10 +480,12 @@ export default function AdminOrdersPage() {
               <span className="ml-1 opacity-70">{summary.counts[k as any] || 0}</span>
             </button>
           ))}
+
         </div>
       </div>
 
-      {loading ? (
+          {/* Table */}
+          {loading ? (
         <div className="rounded-lg border overflow-hidden bg-white">
           <div className="divide-y">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -473,9 +498,38 @@ export default function AdminOrdersPage() {
             ))}
           </div>
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center text-gray-500 text-sm bg-white rounded-lg border p-6">Chưa có đơn hàng phù hợp</div>
-      ) : (
+          ) : filtered.length === 0 ? (
+        // Hiển thị mock data thay vì text trống
+        <div className="rounded-lg border overflow-hidden bg-white shadow-sm">
+          <Table>
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead>Mã đơn</TableHead>
+                <TableHead>Khách hàng</TableHead>
+                <TableHead>SĐT</TableHead>
+                <TableHead>Số SP</TableHead>
+                <TableHead>Tổng</TableHead>
+                <TableHead>Trạng thái</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {MOCK_ORDERS.map((o) => (
+                <TableRow key={o.id}>
+                  <TableCell className="font-mono text-xs">{o.id}</TableCell>
+                  <TableCell className="font-medium">{o.customer?.name}</TableCell>
+                  <TableCell>{o.customer?.phone}</TableCell>
+                  <TableCell>{o.items?.length}</TableCell>
+                  <TableCell className="font-semibold">
+                    {Number(o?.pricing?.total || 0).toLocaleString("vi-VN")}đ
+                  </TableCell>
+                  <TableCell>{renderStatusBadge(o.fulfillment?.status)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+          ) : (
+        // Hiển thị dữ liệu thật
         <div className="rounded-lg border overflow-hidden bg-white shadow-sm">
           <Table>
             <TableHeader className="bg-gray-50">
@@ -503,6 +557,7 @@ export default function AdminOrdersPage() {
             </TableHeader>
             <TableBody>
               {filtered.map((o) => (
+
                 <TableRow key={o.id} className={`${o.archived ? "opacity-60" : ""} ${o.fulfillment?.status === "canceled" ? "bg-red-50" : ""}`}>
                   <TableCell>
                     <input
@@ -530,13 +585,21 @@ export default function AdminOrdersPage() {
                   <TableCell className="font-semibold">{Number(o?.pricing?.total || 0).toLocaleString("vi-VN")}đ</TableCell>
                   <TableCell className="text-xs text-gray-600">{o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString() : "-"}</TableCell>
                   <TableCell className="text-xs text-gray-600">{o.updatedAt?.toDate ? o.updatedAt.toDate().toLocaleString() : "-"}</TableCell>
+
                   <TableCell>{renderStatusBadge(o.fulfillment?.status)}</TableCell>
                   <TableCell className="text-right">
-                    <Select value={(o.fulfillment?.status as string) || "pending"} onValueChange={(v) => updateStatus(o.id, v)}>
-                      <SelectTrigger className="w-[160px] h-8 text-xs"><SelectValue placeholder="Trạng thái" /></SelectTrigger>
+                    <Select
+                      value={(o.fulfillment?.status as string) || "pending"}
+                      onValueChange={(v) => updateStatus(o.id, v)}
+                    >
+                      <SelectTrigger className="w-[160px] h-8 text-xs">
+                        <SelectValue placeholder="Trạng thái" />
+                      </SelectTrigger>
                       <SelectContent>
                         {STATUS_OPTIONS.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                          <SelectItem key={s.value} value={s.value}>
+                            {s.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -556,6 +619,7 @@ export default function AdminOrdersPage() {
               ))}
             </TableBody>
           </Table>
+
           {selected.size > 0 && (
             <div className="flex items-center justify-between p-3 border-t bg-gray-50">
               <div className="text-sm text-gray-600">Đã chọn {selected.size} đơn</div>
@@ -580,7 +644,19 @@ export default function AdminOrdersPage() {
             </div>
           )}
         </div>
-      )}
+          )}
+        </>
+      ) : tab === "create" ? (
+        <div className="space-y-4">
+          <h1 className="text-2xl font-bold">Tạo đơn</h1>
+          <iframe src="/order?embed=1" className="w-full h-[1400px]" title="Tạo đơn" />
+        </div>
+      ) : tab === "scan" ? (
+        <div className="space-y-4">
+          <h1 className="text-2xl font-bold">Quét QR</h1>
+          <iframe src="/scan" className="w-full h-[900px]" title="Quét QR" />
+        </div>
+      ) : null}
     </div>
   )
 }

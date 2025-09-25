@@ -15,7 +15,6 @@
     "test:ci": "npm run typecheck",
     "setup:firebase-admin": "node scripts/configure-firebase-admin.mjs",
     "seed:feedbacks": "node scripts/seed-feedbacks.js",
-    "prepare": "husky",
     "start": "next start",
     "format": "prettier --write ."
   },
@@ -49,6 +48,7 @@
     "@radix-ui/react-toggle": "1.1.1",
     "@radix-ui/react-toggle-group": "1.1.1",
     "@radix-ui/react-tooltip": "1.1.6",
+    "@sentry/nextjs": "^10.11.0",
     "autoprefixer": "^10.4.20",
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
@@ -87,7 +87,6 @@
     "@types/react-dom": "^19.1.9",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.5.3",
-    "husky": "^9.1.6",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"

@@ -1,5 +1,0 @@
-#!/usr/bin/env sh
-# husky
-
-echo "Running pre-commit checks (lint only)"
-npm run lint

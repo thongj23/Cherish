@@ -12,12 +12,12 @@ export default function useFeedbacks(publishedOnly = true) {
   useEffect(() => {
     let mounted = true
     ;(async () => {
-      const base = collection(db, "feedbacks")
       try {
         setLoading(true)
+        const colRef = collection(db, "feedbacks")
         const q = publishedOnly
-          ? query(base, where("published", "==", true), orderBy("createdAt", "desc"))
-          : query(base, orderBy("createdAt", "desc"))
+          ? query(colRef, where("published", "==", true), orderBy("createdAt", "desc"))
+          : query(colRef, orderBy("createdAt", "desc"))
         const snap = await getDocs(q)
         const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as Feedback[]
         if (mounted) setItems(list)
@@ -26,7 +26,7 @@ export default function useFeedbacks(publishedOnly = true) {
         const msg = String(err?.message || "")
         if (/requires an index/i.test(msg)) {
           try {
-            const fallback = query(base, orderBy("createdAt", "desc"), limit(50))
+            const fallback = query(collection(db, "feedbacks"), orderBy("createdAt", "desc"), limit(50))
             const snap = await getDocs(fallback)
             let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as Feedback[]
             if (publishedOnly) list = list.filter((it: any) => !!it.published)
