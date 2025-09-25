@@ -1,0 +1,17 @@
+name: pull_request.yml
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  setup:
+    uses: ./.github/workflows/setup.yml
+
+  lint:
+    uses: ./.github/workflows/lint.yml
+    needs: [ setup ]
+
+  test:
+    uses: ./.github/workflows/test.yml
+    needs: [ setup ]

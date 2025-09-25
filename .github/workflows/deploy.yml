@@ -1,0 +1,33 @@
+name: Deploy
+on:
+  workflow_call:
+
+jobs:
+  deploy:
+    name: Setup environment
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run:
+          npm ci
+          npm install --global vercel@latest
+
+      - name: Get environment variables
+        run: vercel pull --yes --environment=prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build
+        run: vercel build
+
+      - name: Deploy
+        run: vercel deploy --prebuilt
