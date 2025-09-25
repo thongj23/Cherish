@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { X, Save, ImageIcon } from "lucide-react"
-import { useState, useEffect } from "react"
+import { X, Save, ImageIcon, Loader2 } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -14,18 +14,41 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import useImages from "@/hooks/useImages"
 
-export interface ProductFormData {
-  name: string
-  description: string
-  imageUrl: string
-  price: string
-  category: string
-  subCategory: string
-  featured: boolean
-  quantity: string
-  size: number
-  isHidden?: boolean
+import type { ProductFormData } from "@/features/products/types/form"
+
+type CategoryOption = {
+  value: string
+  label: string
+  subCategories: Array<{ value: string; label: string }>
 }
+
+const CATEGORY_OPTIONS: CategoryOption[] = [
+  { value: "Dep", label: "Dép", subCategories: [] },
+  { value: "Classic", label: "Classic", subCategories: [] },
+  { value: "Collab", label: "Collab", subCategories: [] },
+  {
+    value: "Charm",
+    label: "Charm",
+    subCategories: [
+      { value: "con-vat", label: "Con vật" },
+      { value: "hello-kitty", label: "Hello Kitty" },
+      { value: "khac", label: "Khác" },
+    ],
+  },
+]
+
+const createInitialFormState = (): ProductFormData => ({
+  name: "",
+  description: "",
+  imageUrl: "",
+  price: "",
+  category: "",
+  subCategory: "",
+  featured: false,
+  quantity: "",
+  size: 0,
+  isHidden: false,
+})
 
 type ProductFormErrors = {
   name?: string
@@ -48,65 +71,36 @@ interface ProductFormDialogProps {
 }
 
 export default function ProductFormDialog({ open, onOpenChange, initialData, onSubmit }: ProductFormDialogProps) {
-  const [formData, setFormData] = useState<ProductFormData>({
-    name: "",
-    description: "",
-    imageUrl: "",
-    price: "",
-    category: "",
-    subCategory: "",
-    featured: false,
-    quantity: "",
-    size: 0,
-    isHidden: false,
-  })
+  const [formData, setFormData] = useState<ProductFormData>(createInitialFormState())
 
   const [errors, setErrors] = useState<ProductFormErrors>({})
   const [isSelectImageOpen, setIsSelectImageOpen] = useState(false)
-  const images = useImages()
+  const {
+    images,
+    loading: loadingImages,
+    loadingMore: loadingMoreImages,
+    hasMore: hasMoreImages,
+    loadMore: loadMoreImages,
+  } = useImages()
 
-  // Categories with subcategories
-  const categoryOptions = [
-    { value: "Dep", label: "Dép", subCategories: [] },
-    { value: "Classic", label: "Classic", subCategories: [] },
-    { value: "Collab", label: "Collab", subCategories: [] },
-    {
-      value: "Charm",
-      label: "Charm",
-      subCategories: [
-        { value: "con-vat", label: "Con vật" },
-        { value: "hello-kitty", label: "Hello Kitty" },
-        { value: "khac", label: "Khác" },
-      ],
-    },
-  ]
-
-  const selectedCategoryData = categoryOptions.find((cat) => cat.value === formData.category)
-  const showSubCategory = selectedCategoryData && selectedCategoryData.subCategories.length > 0
+  const selectedCategoryData = useMemo(
+    () => CATEGORY_OPTIONS.find((category) => category.value === formData.category),
+    [formData.category],
+  )
+  const showSubCategory = Boolean(selectedCategoryData?.subCategories.length)
 
   useEffect(() => {
     if (initialData) {
       setFormData({
+        ...createInitialFormState(),
         ...initialData,
         subCategory: initialData.subCategory || "",
         isHidden: initialData.isHidden ?? false,
       })
-      setErrors({})
     } else {
-      setFormData({
-        name: "",
-        description: "",
-        imageUrl: "",
-        price: "",
-        category: "",
-        subCategory: "",
-        featured: false,
-        quantity: "",
-        size: 0,
-        isHidden: false,
-      })
-      setErrors({})
+      setFormData(createInitialFormState())
     }
+    setErrors({})
   }, [initialData, open])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -152,7 +146,6 @@ export default function ProductFormDialog({ open, onOpenChange, initialData, onS
         // Ensure subCategory is empty string instead of undefined for non-Charm categories
         subCategory: showSubCategory ? formData.subCategory : "",
       }
-      console.log("📝 Form data being submitted:", cleanedFormData)
       onSubmit(cleanedFormData)
     }
   }
@@ -169,15 +162,15 @@ export default function ProductFormDialog({ open, onOpenChange, initialData, onS
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg sm:max-w-md md:max-w-lg flex flex-col max-h-[90vh] sm:max-h-[80vh]">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden p-0 sm:max-w-md md:max-w-xl">
+          <DialogHeader className="px-4 pt-4">
             <DialogTitle className="text-lg font-semibold">
               {initialData ? "Sửa sản phẩm" : "Thêm sản phẩm"}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-1">
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex-1 overflow-y-auto px-4 pb-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
               {/* Product Name */}
               <div>
                 <Label className="text-sm font-medium">Tên sản phẩm *</Label>
@@ -236,7 +229,7 @@ export default function ProductFormDialog({ open, onOpenChange, initialData, onS
               </div>
 
               {/* Price and Quantity Row */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Label className="text-sm font-medium">Giá *</Label>
                   <Input
@@ -267,11 +260,11 @@ export default function ProductFormDialog({ open, onOpenChange, initialData, onS
               <div>
                 <Label className="text-sm font-medium">Danh mục *</Label>
                 <Select value={formData.category} onValueChange={handleCategoryChange}>
-                  <SelectTrigger className="w-full mt-1">
+                  <SelectTrigger className="mt-1 w-full">
                     <SelectValue placeholder="Chọn danh mục" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categoryOptions.map((category) => (
+                    {CATEGORY_OPTIONS.map((category) => (
                       <SelectItem key={category.value} value={category.value}>
                         {category.label}
                       </SelectItem>
@@ -289,11 +282,11 @@ export default function ProductFormDialog({ open, onOpenChange, initialData, onS
                     value={formData.subCategory}
                     onValueChange={(value) => setFormData((prev) => ({ ...prev, subCategory: value }))}
                   >
-                    <SelectTrigger className="w-full mt-1">
+                    <SelectTrigger className="mt-1 w-full">
                       <SelectValue placeholder="Chọn danh mục phụ" />
                     </SelectTrigger>
                     <SelectContent>
-                      {selectedCategoryData.subCategories.map((subCat) => (
+                      {(selectedCategoryData?.subCategories ?? []).map((subCat) => (
                         <SelectItem key={subCat.value} value={subCat.value}>
                           {subCat.label}
                         </SelectItem>
@@ -316,21 +309,21 @@ export default function ProductFormDialog({ open, onOpenChange, initialData, onS
                   min={30}
                   max={50}
                   required
-                  className="w-full mt-1"
+                  className="mt-1 w-full"
                 />
                 {errors.size && <p className="text-red-500 text-xs mt-1">{errors.size}</p>}
               </div>
 
               {/* Switches */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between p-2 rounded-lg border">
+              <div className="space-y-4 pt-2">
+                <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
                   <Label className="text-sm font-medium">Sản phẩm nổi bật</Label>
                   <Switch
                     checked={formData.featured}
                     onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, featured: checked }))}
                   />
                 </div>
-                <div className="flex items-center justify-between p-2 rounded-lg border">
+                <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
                   <Label className="text-sm font-medium">Ẩn sản phẩm</Label>
                   <Switch
                     checked={formData.isHidden}
@@ -340,7 +333,7 @@ export default function ProductFormDialog({ open, onOpenChange, initialData, onS
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-2 pt-4 border-t">
+              <div className="flex justify-end gap-2 border-t pt-4">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   <X className="w-4 h-4 mr-1" /> Hủy
                 </Button>
@@ -359,26 +352,56 @@ export default function ProductFormDialog({ open, onOpenChange, initialData, onS
           <DialogHeader>
             <DialogTitle>Chọn ảnh từ thư viện</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[400px] overflow-y-auto">
-            {images.map((img, index) => (
-              <div
-                key={img.id}
-                className="relative aspect-square border rounded-lg cursor-pointer hover:shadow-md transition-shadow overflow-hidden"
-                onClick={() => {
-                  setFormData((prev) => ({ ...prev, imageUrl: img.url }))
-                  setIsSelectImageOpen(false)
-                  setErrors((prev) => ({ ...prev, imageUrl: "" }))
-                }}
-              >
-                <Image
-                  src={img.url || "/placeholder.svg"}
-                  alt={`Image ${index + 1}`}
-                  fill
-                  className="object-cover hover:scale-105 transition-transform"
-                />
+          <div className="grid max-h-[400px] grid-cols-2 gap-4 overflow-y-auto sm:grid-cols-3">
+            {loadingImages && images.length === 0 ? (
+              Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="aspect-square animate-pulse rounded-lg bg-gray-200" />
+              ))
+            ) : images.length === 0 ? (
+              <div className="col-span-full rounded-lg border border-dashed p-6 text-center text-sm text-gray-500">
+                Chưa có ảnh nào. Hãy upload ảnh mới.
               </div>
-            ))}
+            ) : (
+              images.map((img, index) => (
+                <button
+                  type="button"
+                  key={img.id}
+                  className="group relative aspect-square overflow-hidden rounded-lg border"
+                  onClick={() => {
+                    setFormData((prev) => ({ ...prev, imageUrl: img.url }))
+                    setIsSelectImageOpen(false)
+                    setErrors((prev) => ({ ...prev, imageUrl: "" }))
+                  }}
+                >
+                  <Image
+                    src={img.url || "/placeholder.svg"}
+                    alt={`Image ${index + 1}`}
+                    fill
+                    className="object-cover transition-transform group-hover:scale-105"
+                  />
+                  <span className="absolute inset-x-0 bottom-0 bg-black/40 py-1 text-center text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
+                    Chọn ảnh
+                  </span>
+                </button>
+              ))
+            )}
           </div>
+          {hasMoreImages && (
+            <Button
+              variant="outline"
+              onClick={loadMoreImages}
+              disabled={loadingMoreImages}
+              className="mt-4 w-full"
+            >
+              {loadingMoreImages ? (
+                <span className="flex items-center justify-center gap-2 text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Đang tải thêm...
+                </span>
+              ) : (
+                "Tải thêm ảnh"
+              )}
+            </Button>
+          )}
         </DialogContent>
       </Dialog>
     </>

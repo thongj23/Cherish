@@ -12,7 +12,7 @@ function parsePrivateKey(): string {
     } catch {}
   }
   if (!key.startsWith("-----BEGIN PRIVATE KEY-----") || !key.includes("-----END PRIVATE KEY-----")) {
-    throw new Error("Invalid PEM key format")
+    throw new Error("Invalid PEM key format")//
   }
   return key
 }

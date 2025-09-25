@@ -1,12 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import useAdminFeedbacks from "@/hooks/useAdminFeedbacks"
+import dynamic from "next/dynamic"
+import Image from "next/image"
+
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
-import TableImg from "@/components/adminPage/TableImg"
-import Image from "next/image"
+import useAdminFeedbacks from "@/hooks/useAdminFeedbacks"
+
+const TableImg = dynamic(() => import("@/components/adminPage/TableImg"), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-xl border border-dashed border-purple-200 p-6 text-center text-sm text-purple-600">
+      Đang tải thư viện ảnh...
+    </div>
+  ),
+})
 
 export default function AdminFeedbackPage() {
   const { items, loading, addFromUrl, setPublished, remove } = useAdminFeedbacks()
@@ -32,12 +42,17 @@ export default function AdminFeedbackPage() {
               <div className="relative w-full aspect-[3/4]">
                 <Image src={fb.url || "/placeholder.svg"} alt="Feedback" fill className="object-cover" />
               </div>
-              <div className="flex items-center justify-between p-2 border-t">
-                <label className="text-sm flex items-center gap-2">
-                  <Switch checked={!!fb.published} onCheckedChange={(v) => setPublished(fb.id, v)} />
-                  Hiện trên bio
+              <div className="flex flex-col gap-3 p-3 border-t sm:flex-row sm:items-center sm:justify-between">
+                <label className="flex items-center gap-3 text-sm text-gray-700">
+                  <span className="font-medium">Hiện trên bio</span>
+                  <Switch
+                    checked={!!fb.published}
+                    onCheckedChange={(value) => setPublished(fb.id, value)}
+                  />
                 </label>
-                <Button variant="destructive" size="sm" onClick={() => remove(fb.id)}>Xóa</Button>
+                <Button variant="destructive" size="sm" onClick={() => remove(fb.id)}>
+                  Xóa
+                </Button>
               </div>
             </div>
           ))}
@@ -64,4 +79,3 @@ export default function AdminFeedbackPage() {
     </div>
   )
 }
-

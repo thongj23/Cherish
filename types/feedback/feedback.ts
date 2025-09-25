@@ -3,5 +3,5 @@ export interface Feedback {
   url: string
   published?: boolean
   createdAt?: any
+  caption?: string
 }
-
