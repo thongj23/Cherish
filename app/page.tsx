@@ -6,7 +6,7 @@ import { collection, getDocs } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import ProfileSection from "@/components/bio/ProfileSection"
 import SocialLinks from "@/components/bio/SocialLinks"
-import FeedbackStrip from "@/components/bio/FeedbackStrip"
+
 import ProductGrid from "@/components/bio/ProductGrid"
 import FeedbackGallery from "@/components/bio/FeedbackGallery"
 import CursorTrail from "@/components/bio/CursorTrail"
@@ -114,7 +114,7 @@ export default function BioPage() {
       >
         <ProfileSection />
         <SocialLinks />
-        <FeedbackStrip />
+ 
         {error && (
           <p className="text-red-600 text-sm mb-4 text-center">{error}</p>
         )}
