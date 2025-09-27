@@ -43,7 +43,7 @@ export default function ProductManagementHeader({
   ]
 
   return (
-    <div className="sticky top-16 z-30 mb-6">
+    <div className="mb-6">
       <div className="rounded-2xl border border-purple-100 bg-white/90 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/75">
         <div className="flex flex-col gap-4 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-4">

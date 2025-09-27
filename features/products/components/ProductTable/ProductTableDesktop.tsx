@@ -56,15 +56,21 @@ export function ProductTableDesktop({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {products.map((product) => (
-            <TableRow
-              key={product.id}
-              className={`group hover:bg-gray-50 transition-colors odd:bg-gray-50/40 border-l-4 ${
-                product.featured ? "border-amber-300" : "border-transparent"
-              } ${product.status === "inactive" ? "opacity-60" : ""} ${
-                product.status === "disabled" ? "opacity-40" : ""
-              }`}
-            >
+          {products.map((product) => {
+            const categoryLabel = product.category?.trim() ?? ""
+            const subCategoryLabel = product.subCategory?.trim() ?? ""
+            const priceLabel =
+              product.price != null ? `${product.price.toLocaleString()}đ` : "-"
+
+            return (
+              <TableRow
+                key={product.id}
+                className={`group hover:bg-gray-50 transition-colors odd:bg-gray-50/40 border-l-4 ${
+                  product.featured ? "border-amber-300" : "border-transparent"
+                } ${product.status === "inactive" ? "opacity-60" : ""} ${
+                  product.status === "disabled" ? "opacity-40" : ""
+                }`}
+              >
               <TableCell>
                 <div className="relative w-12 h-12 rounded-lg overflow-hidden ring-1 ring-gray-200">
                   <Image
@@ -91,41 +97,51 @@ export function ProductTableDesktop({
                   )}
                 </div>
               </TableCell>
-              <TableCell>
-                <Badge variant="outline">{product.category}</Badge>
-              </TableCell>
-              <TableCell>
-                {product.subCategory ? (
-                  <Badge variant="outline" className="bg-purple-50 text-purple-700">
-                    {product.subCategory}
-                  </Badge>
-                ) : (
-                  <span className="text-gray-400 text-sm">-</span>
-                )}
-              </TableCell>
-              <TableCell className="font-medium">{product.price?.toLocaleString()}đ</TableCell>
-              <TableCell>{product.quantity}</TableCell>
-              <TableCell>{product.size}</TableCell>
-              <TableCell>
-                <ProductStatusControl status={product.status} onChange={(value) => onChangeStatus(product.id, value)} />
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex gap-1 justify-end">
-                  <Button size="icon" variant="ghost" onClick={() => onEdit(product)} className="h-8 w-8">
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => onDelete(product.id)}
-                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+                <TableCell>
+                  {categoryLabel ? (
+                    <Badge variant="outline">{categoryLabel}</Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-dashed text-gray-400">
+                      Chưa phân loại
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {subCategoryLabel ? (
+                    <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                      {subCategoryLabel}
+                    </Badge>
+                  ) : (
+                    <span className="text-gray-400 text-sm">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="font-medium">{priceLabel}</TableCell>
+                <TableCell>{product.quantity ?? "-"}</TableCell>
+                <TableCell>{product.size ?? "-"}</TableCell>
+                <TableCell>
+                  <ProductStatusControl
+                    status={product.status}
+                    onChange={(value) => onChangeStatus(product.id, value)}
+                  />
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex gap-1 justify-end">
+                    <Button size="icon" variant="ghost" onClick={() => onEdit(product)} className="h-8 w-8">
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => onDelete(product.id)}
+                      className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
     </div>

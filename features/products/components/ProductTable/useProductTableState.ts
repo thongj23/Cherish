@@ -41,6 +41,9 @@ interface UseProductTableStateReturn {
 }
 
 const ALL_VALUE = "all"
+export const UNCATEGORIZED_CATEGORY_VALUE = "__uncategorized"
+
+const normalize = (value?: string | null) => value?.trim() ?? ""
 
 export function useProductTableState(
   products: Product[],
@@ -57,21 +60,34 @@ export function useProductTableState(
   const [page, setPageState] = useState(1)
 
   const categories = useMemo(() => {
-    const uniqueCategories = new Set(
-      products
-        .map((product) => product.category)
-        .filter((category): category is string => Boolean(category)),
-    )
-    return [ALL_VALUE, ...uniqueCategories]
+    const uniqueCategories = new Set<string>()
+    let hasUncategorized = false
+
+    products.forEach((product) => {
+      const category = normalize(product.category)
+      if (category) {
+        uniqueCategories.add(category)
+      } else {
+        hasUncategorized = true
+      }
+    })
+
+    const base = hasUncategorized
+      ? [ALL_VALUE, UNCATEGORIZED_CATEGORY_VALUE]
+      : [ALL_VALUE]
+
+    return [...base, ...Array.from(uniqueCategories)]
   }, [products])
 
   const subCategories = useMemo(() => {
     if (selectedCategory === ALL_VALUE) return [ALL_VALUE]
 
+    if (selectedCategory === UNCATEGORIZED_CATEGORY_VALUE) return [ALL_VALUE]
+
     const uniqueSubCategories = new Set(
       products
-        .filter((product) => product.category === selectedCategory)
-        .map((product) => product.subCategory)
+        .filter((product) => normalize(product.category) === selectedCategory)
+        .map((product) => normalize(product.subCategory))
         .filter((subCategory): subCategory is string => Boolean(subCategory)),
     )
 
@@ -81,10 +97,15 @@ export function useProductTableState(
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
       const matchesSearch = product.name.toLowerCase().includes(deferredSearch.toLowerCase())
+      const productCategory = normalize(product.category)
       const matchesCategory =
-        selectedCategory === ALL_VALUE || product.category === selectedCategory
+        selectedCategory === ALL_VALUE ||
+        (selectedCategory === UNCATEGORIZED_CATEGORY_VALUE
+          ? productCategory === ""
+          : productCategory === selectedCategory)
+      const productSubCategory = normalize(product.subCategory)
       const matchesSubCategory =
-        selectedSubCategory === ALL_VALUE || product.subCategory === selectedSubCategory
+        selectedSubCategory === ALL_VALUE || productSubCategory === selectedSubCategory
       const matchesStatus = statusFilter === ALL_VALUE || product.status === statusFilter
 
       return matchesSearch && matchesCategory && matchesSubCategory && matchesStatus

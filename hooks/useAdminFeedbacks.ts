@@ -1,7 +1,18 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore"
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import type { Feedback } from "@/types/feedback/feedback"
 
@@ -30,7 +41,23 @@ export default function useAdminFeedbacks() {
   }, [fetchAll])
 
   const addFromUrl = async (url: string) => {
-    await addDoc(collection(db, "feedbacks"), { url, published: true, createdAt: serverTimestamp() })
+    const feedbackDoc = await addDoc(collection(db, "feedbacks"), {
+      url,
+      published: true,
+      createdAt: serverTimestamp(),
+    })
+
+    await setDoc(
+      doc(db, "images", `feedback-${feedbackDoc.id}`),
+      {
+        url,
+        category: "feedback",
+        referenceId: feedbackDoc.id,
+        createdAt: serverTimestamp(),
+      },
+      { merge: true },
+    )
+
     await fetchAll()
   }
 
@@ -41,6 +68,7 @@ export default function useAdminFeedbacks() {
 
   const remove = async (id: string) => {
     await deleteDoc(doc(db, "feedbacks", id))
+    await deleteDoc(doc(db, "images", `feedback-${id}`)).catch(() => null)
     setItems((prev) => prev.filter((it) => it.id !== id))
   }
 

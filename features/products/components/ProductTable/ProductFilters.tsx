@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import type { ProductStatus } from "@/types/product/product"
 
-import type { StatusCounts } from "./useProductTableState"
+import { UNCATEGORIZED_CATEGORY_VALUE, type StatusCounts } from "./useProductTableState"
 
 interface ProductFiltersProps {
   searchTerm: string
@@ -52,6 +52,12 @@ export function ProductFilters({
   showSubCategorySelect,
   isFiltered,
 }: ProductFiltersProps) {
+  const renderCategoryLabel = (category: string) => {
+    if (category === "all") return "Tất cả"
+    if (category === UNCATEGORIZED_CATEGORY_VALUE) return "Chưa phân loại"
+    return category
+  }
+
   return (
     <div className="bg-white p-4 rounded-lg border shadow-sm space-y-3">
       <div className="flex flex-wrap gap-3 items-center">
@@ -74,7 +80,7 @@ export function ProductFilters({
             <SelectContent>
               {categories.map((category) => (
                 <SelectItem key={category} value={category}>
-                  {category === "all" ? "Tất cả" : category}
+                  {renderCategoryLabel(category)}
                 </SelectItem>
               ))}
             </SelectContent>

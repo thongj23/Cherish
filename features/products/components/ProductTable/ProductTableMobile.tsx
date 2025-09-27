@@ -18,13 +18,19 @@ interface ProductTableMobileProps {
 export function ProductTableMobile({ products, onEdit, onDelete, onChangeStatus }: ProductTableMobileProps) {
   return (
     <div className="sm:hidden space-y-4">
-      {products.map((product) => (
-        <div
-          key={product.id}
-          className={`bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow ${
-            product.status === "inactive" ? "opacity-60" : ""
-          } ${product.status === "disabled" ? "opacity-40" : ""}`}
-        >
+      {products.map((product) => {
+        const categoryLabel = product.category?.trim() ?? ""
+        const subCategoryLabel = product.subCategory?.trim() ?? ""
+        const priceLabel =
+          product.price != null ? `${product.price.toLocaleString()}đ` : "-"
+
+        return (
+          <div
+            key={product.id}
+            className={`bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow ${
+              product.status === "inactive" ? "opacity-60" : ""
+            } ${product.status === "disabled" ? "opacity-40" : ""}`}
+          >
           <div className="flex items-start gap-3 mb-3">
             <div className="relative w-16 h-16 rounded-lg overflow-hidden border flex-shrink-0">
               <Image
@@ -43,12 +49,15 @@ export function ProductTableMobile({ products, onEdit, onDelete, onChangeStatus 
                 <h3 className="font-semibold truncate">{product.name}</h3>
               </div>
               <div className="flex flex-wrap gap-1 mt-1">
-                <Badge variant="outline" className="text-xs">
-                  {product.category}
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${categoryLabel ? "" : "border-dashed text-gray-400"}`}
+                >
+                  {categoryLabel || "Chưa phân loại"}
                 </Badge>
-                {product.subCategory && (
+                {subCategoryLabel && (
                   <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700">
-                    {product.subCategory}
+                    {subCategoryLabel}
                   </Badge>
                 )}
                 {product.featured && (
@@ -62,13 +71,13 @@ export function ProductTableMobile({ products, onEdit, onDelete, onChangeStatus 
 
           <div className="grid grid-cols-2 gap-2 text-sm mb-3">
             <div>
-              Giá: <span className="font-medium">{product.price?.toLocaleString()}đ</span>
+              Giá: <span className="font-medium">{priceLabel}</span>
             </div>
             <div>
-              SL: <span className="font-medium">{product.quantity}</span>
+              SL: <span className="font-medium">{product.quantity ?? "-"}</span>
             </div>
             <div>
-              Size: <span className="font-medium">{product.size}</span>
+              Size: <span className="font-medium">{product.size ?? "-"}</span>
             </div>
             <ProductStatusControl
               status={product.status}
@@ -91,8 +100,9 @@ export function ProductTableMobile({ products, onEdit, onDelete, onChangeStatus 
               <Trash2 className="w-4 h-4 mr-1" /> Xóa
             </Button>
           </div>
-        </div>
-      ))}
+          </div>
+        )
+      })}
     </div>
   )
 }

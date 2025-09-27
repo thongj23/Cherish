@@ -81,7 +81,7 @@ export default function ProductFormDialog({ open, onOpenChange, initialData, onS
     loadingMore: loadingMoreImages,
     hasMore: hasMoreImages,
     loadMore: loadMoreImages,
-  } = useImages()
+  } = useImages("product")
 
   const selectedCategoryData = useMemo(
     () => CATEGORY_OPTIONS.find((category) => category.value === formData.category),

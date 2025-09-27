@@ -8,17 +8,28 @@ import {
   orderBy,
   query,
   startAfter,
+  where,
+  type DocumentData,
   type QueryDocumentSnapshot,
 } from "firebase/firestore"
 
 import { db } from "@/lib/firebase"
 
-interface ImageDoc {
+export type ImageCategory = "product" | "feedback"
+export type ImageCategoryFilter = ImageCategory | "all"
+
+export interface ImageDoc {
   id: string
   url: string
+  category: ImageCategory
+  referenceId?: string | null
 }
 
-const PAGE_SIZE = 12
+const DEFAULT_PAGE_SIZE = 12
+
+export interface UseImagesOptions {
+  pageSize?: number
+}
 
 export interface UseImagesResult {
   images: ImageDoc[]
@@ -29,59 +40,95 @@ export interface UseImagesResult {
   loadMore: () => Promise<void>
 }
 
-export default function useImages(): UseImagesResult {
+const normalizeCategory = (value: unknown): ImageCategory => {
+  return value === "feedback" ? "feedback" : "product"
+}
+
+const buildQuery = (
+  category: ImageCategoryFilter,
+  pageSize: number,
+  cursor?: QueryDocumentSnapshot<DocumentData> | null,
+) => {
+  const base = collection(db, "images")
+  const constraints = [] as Array<any>
+
+  if (category !== "all") {
+    constraints.push(where("category", "==", category))
+  }
+
+  constraints.push(orderBy("createdAt", "desc"))
+  if (cursor) {
+    constraints.push(startAfter(cursor))
+  }
+  constraints.push(limit(pageSize))
+
+  return query(base, ...constraints)
+}
+
+export default function useImages(
+  category: ImageCategoryFilter = "all",
+  options: UseImagesOptions = {},
+): UseImagesResult {
+  const pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE
   const [images, setImages] = useState<ImageDoc[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
-  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null)
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null)
 
   const fetchInitial = useCallback(async () => {
     setLoading(true)
     try {
-      const q = query(collection(db, "images"), orderBy("createdAt", "desc"), limit(PAGE_SIZE))
-      const snapshot = await getDocs(q)
-      const docs = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        url: (doc.data().url as string) || "",
-      }))
+      const snapshot = await getDocs(buildQuery(category, pageSize))
+      const docs = snapshot.docs.map((doc) => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          url: (data.url as string) || "",
+          category: normalizeCategory(data.category),
+          referenceId: data.referenceId as string | undefined,
+        }
+      })
+
       setImages(docs)
       setLastDoc(snapshot.docs[snapshot.docs.length - 1] ?? null)
-      setHasMore(snapshot.docs.length === PAGE_SIZE)
+      setHasMore(snapshot.docs.length === pageSize)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [category, pageSize])
 
   const loadMore = useCallback(async () => {
     if (!hasMore || loadingMore || !lastDoc) return
     setLoadingMore(true)
     try {
-      const q = query(
-        collection(db, "images"),
-        orderBy("createdAt", "desc"),
-        startAfter(lastDoc),
-        limit(PAGE_SIZE),
-      )
-      const snapshot = await getDocs(q)
-      const docs = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        url: (doc.data().url as string) || "",
-      }))
+      const snapshot = await getDocs(buildQuery(category, pageSize, lastDoc))
+      const docs = snapshot.docs.map((doc) => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          url: (data.url as string) || "",
+          category: normalizeCategory(data.category),
+          referenceId: data.referenceId as string | undefined,
+        }
+      })
 
       setImages((prev) => [...prev, ...docs])
       setLastDoc(snapshot.docs[snapshot.docs.length - 1] ?? lastDoc)
-      setHasMore(snapshot.docs.length === PAGE_SIZE)
+      setHasMore(snapshot.docs.length === pageSize)
     } finally {
       setLoadingMore(false)
     }
-  }, [hasMore, lastDoc, loadingMore])
+  }, [category, pageSize, hasMore, loadingMore, lastDoc])
 
   const refresh = useCallback(async () => {
     await fetchInitial()
   }, [fetchInitial])
 
   useEffect(() => {
+    setImages([])
+    setLastDoc(null)
+    setHasMore(true)
     fetchInitial()
   }, [fetchInitial])
 

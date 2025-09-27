@@ -65,6 +65,8 @@ export default function AdminFeedbackPage() {
             <DialogTitle>Chọn/Upload ảnh feedback</DialogTitle>
           </DialogHeader>
           <TableImg
+            initialCategory="feedback"
+            defaultUploadCategory="feedback"
             onUpload={async (url) => {
               await addFromUrl(url)
               setOpen(false)

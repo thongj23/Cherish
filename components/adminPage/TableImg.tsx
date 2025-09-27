@@ -1,7 +1,7 @@
 "use client"
 
-import { useRef, useState } from "react"
-import { Camera, Loader2, UploadCloud } from "lucide-react"
+import { useMemo, useRef, useState } from "react"
+import { Camera, Images, Loader2, UploadCloud } from "lucide-react"
 import {
   addDoc,
   collection,
@@ -12,14 +12,32 @@ import {
 import Image from "next/image"
 
 import { db } from "@/lib/firebase"
-import useImages from "@/hooks/useImages"
+import useImages, { type ImageCategory, type ImageCategoryFilter, type ImageDoc } from "@/hooks/useImages"
 
 interface TableImgProps {
   onUpload?: (uploadedUrl: string) => void
   onSelect?: (url: string) => void
+  initialCategory?: ImageCategoryFilter
+  defaultUploadCategory?: ImageCategory
+  showCategoryFilter?: boolean
 }
 
-export default function TableImg({ onUpload, onSelect }: TableImgProps) {
+type UploadTargetCategory = ImageCategory
+
+const CATEGORY_LABELS: Record<ImageCategoryFilter, string> = {
+  all: "Tất cả",
+  product: "Sản phẩm",
+  feedback: "Feedback",
+}
+
+export default function TableImg({
+  onUpload,
+  onSelect,
+  initialCategory = "product",
+  defaultUploadCategory = "product",
+  showCategoryFilter = true,
+}: TableImgProps) {
+  const [activeCategory, setActiveCategory] = useState<ImageCategoryFilter>(initialCategory)
   const {
     images,
     loading,
@@ -27,7 +45,7 @@ export default function TableImg({ onUpload, onSelect }: TableImgProps) {
     hasMore,
     loadMore,
     refresh,
-  } = useImages()
+  } = useImages(activeCategory)
   const [uploading, setUploading] = useState(false)
   const [uploadMessage, setUploadMessage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -36,9 +54,16 @@ export default function TableImg({ onUpload, onSelect }: TableImgProps) {
   const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || ""
   const disabled = !cloudName || !uploadPreset
 
+  const uploadCategory: UploadTargetCategory = useMemo(() => {
+    if (activeCategory === "all") return defaultUploadCategory
+    return activeCategory
+  }, [activeCategory, defaultUploadCategory])
+
   const persistImage = async (url: string) => {
     await addDoc(collection(db, "images"), {
       url,
+      category: uploadCategory,
+      referenceId: null,
       createdAt: serverTimestamp(),
     })
   }
@@ -130,9 +155,12 @@ export default function TableImg({ onUpload, onSelect }: TableImgProps) {
     }
   }
 
-  const deleteImage = async (id: string) => {
+  const deleteImage = async (image: ImageDoc) => {
     try {
-      await deleteDoc(doc(db, "images", id))
+      await deleteDoc(doc(db, "images", image.id))
+      if (image.category === "feedback" && image.referenceId) {
+        await deleteDoc(doc(db, "feedbacks", image.referenceId)).catch(() => null)
+      }
       await refresh()
     } catch (err) {
       console.error("Error deleting:", err)
@@ -196,6 +224,28 @@ export default function TableImg({ onUpload, onSelect }: TableImgProps) {
         </div>
       )}
 
+      {showCategoryFilter && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          {(Object.keys(CATEGORY_LABELS) as ImageCategoryFilter[]).map((category) => (
+            <button
+              key={category}
+              type="button"
+              onClick={() => setActiveCategory(category)}
+              className={`rounded-full border px-3 py-1.5 font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-500 ${
+                activeCategory === category
+                  ? "border-purple-500 bg-purple-600 text-white"
+                  : "border-purple-200 bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <span className="inline-flex items-center gap-1">
+                {category === "all" && <Images className="h-3.5 w-3.5" />}
+                {CATEGORY_LABELS[category]}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
         {loading && images.length === 0 ? (
           Array.from({ length: 6 }).map((_, index) => (
@@ -203,7 +253,9 @@ export default function TableImg({ onUpload, onSelect }: TableImgProps) {
           ))
         ) : images.length === 0 ? (
           <div className="col-span-full rounded-xl border border-dashed p-6 text-center text-sm text-gray-500">
-            Chưa có ảnh nào. Hãy upload ảnh mới.
+            {activeCategory === "feedback"
+              ? "Chưa có ảnh feedback nào. Hãy upload ảnh mới."
+              : "Chưa có ảnh nào. Hãy upload ảnh mới."}
           </div>
         ) : (
           images.map((img) => (
@@ -232,12 +284,16 @@ export default function TableImg({ onUpload, onSelect }: TableImgProps) {
                 type="button"
                 onClick={async (event) => {
                   event.stopPropagation()
-                  await deleteImage(img.id)
+                  await deleteImage(img)
                 }}
                 className="absolute top-2 right-2 rounded-full bg-red-600/90 px-2 py-1 text-xs font-semibold text-white shadow hover:bg-red-600"
               >
                 Xóa
               </button>
+
+              <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-gray-700 shadow">
+                {CATEGORY_LABELS[img.category]}
+              </span>
             </div>
           ))
         )}

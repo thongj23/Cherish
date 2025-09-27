@@ -2,7 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
-import { collection, addDoc, getDocs, orderBy, query, serverTimestamp, updateDoc, doc, deleteDoc } from "firebase/firestore"
+import {
+  collection,
+  addDoc,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  doc,
+  deleteDoc,
+  setDoc,
+} from "firebase/firestore"
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage"
 import { storage } from "@/lib/firebase"
 import { db } from "@/lib/firebase"
@@ -49,12 +60,24 @@ export default function FeedbackAdmin() {
     if (!canSubmit) return
     setSaving(true)
     try {
-      await addDoc(collection(db, "feedbacks"), {
+      const refDoc = await addDoc(collection(db, "feedbacks"), {
         url: url.trim(),
         caption: caption.trim() || null,
         active: true,
         createdAt: serverTimestamp(),
       })
+
+      await setDoc(
+        doc(db, "images", `feedback-${refDoc.id}`),
+        {
+          url: url.trim(),
+          category: "feedback",
+          referenceId: refDoc.id,
+          createdAt: serverTimestamp(),
+        },
+        { merge: true },
+      )
+
       setUrl("")
       setCaption("")
       await load()
@@ -86,6 +109,7 @@ export default function FeedbackAdmin() {
   const remove = async (id: string) => {
     if (typeof window !== 'undefined' && !window.confirm("Xoá feedback này?")) return
     await deleteDoc(doc(db, "feedbacks", id))
+    await deleteDoc(doc(db, "images", `feedback-${id}`)).catch(() => null)
     await load()
   }
 
