@@ -1,25 +1,53 @@
 "use client"
 
-import { UploadCloud } from "lucide-react"
-import { addDoc, collection, serverTimestamp } from "firebase/firestore"
+import { useRef, useState } from "react"
+import { Camera, Loader2, UploadCloud } from "lucide-react"
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+} from "firebase/firestore"
+import Image from "next/image"
+
 import { db } from "@/lib/firebase"
 import useImages from "@/hooks/useImages"
-import Image from "next/image"
-import { deleteDoc, doc } from "firebase/firestore"
+
 interface TableImgProps {
   onUpload?: (uploadedUrl: string) => void
   onSelect?: (url: string) => void
 }
 
 export default function TableImg({ onUpload, onSelect }: TableImgProps) {
-  const images = useImages()
+  const {
+    images,
+    loading,
+    loadingMore,
+    hasMore,
+    loadMore,
+    refresh,
+  } = useImages()
+  const [uploading, setUploading] = useState(false)
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || ""
   const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || ""
+  const disabled = !cloudName || !uploadPreset
 
-  const handleUpload = async () => {
-    if (!cloudName || !uploadPreset) {
-      alert("Thiếu cấu hình Cloudinary (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME / NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET)")
+  const persistImage = async (url: string) => {
+    await addDoc(collection(db, "images"), {
+      url,
+      createdAt: serverTimestamp(),
+    })
+  }
+
+  const handleWidgetUpload = async () => {
+    if (disabled) {
+      setUploadMessage(
+        "Thiếu cấu hình Cloudinary (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME / NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET).",
+      )
       return
     }
 
@@ -31,83 +59,200 @@ export default function TableImg({ onUpload, onSelect }: TableImgProps) {
         multiple: false,
         cropping: false,
       },
-      async (error: any, result: any) => {
+      async (error: unknown, result: any) => {
         if (!error && result && result.event === "success") {
-          const uploadedUrl = result.info.secure_url
-          console.log("Uploaded:", uploadedUrl)
-
+          const uploadedUrl = result.info.secure_url as string
           try {
-            await addDoc(collection(db, "images"), {
-              url: uploadedUrl,
-              createdAt: serverTimestamp(),
-            })
-
+            await persistImage(uploadedUrl)
+            onUpload?.(uploadedUrl)
+            await refresh()
+            setUploadMessage("Upload thành công")
           } catch (err) {
             console.error("Error saving to Firestore:", err)
+            setUploadMessage("Lỗi khi lưu ảnh. Vui lòng thử lại.")
           }
-
-          onUpload?.(uploadedUrl)
+        } else if (error) {
+          console.error("Cloudinary widget error", error)
+          setUploadMessage("Không thể upload ảnh. Vui lòng thử lại.")
         }
-      }
+      },
     )
 
     myWidget.open()
   }
-const deleteImage = async (id: string) => {
-  try {
-    await deleteDoc(doc(db, "images", id))
 
-    // Cập nhật local images:
-    location.reload() // Hoặc: refetch hook nếu muốn đẹp hơn
-  } catch (err) {
-    console.error("Error deleting:", err)
+  const uploadFromFile = async (file: File) => {
+    if (disabled) {
+      setUploadMessage(
+        "Thiếu cấu hình Cloudinary (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME / NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET).",
+      )
+      return
+    }
+
+    setUploading(true)
+    setUploadMessage(null)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("upload_preset", uploadPreset)
+
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, {
+        method: "POST",
+        body: formData,
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data?.error?.message || "Upload thất bại")
+      }
+
+      const uploadedUrl = data.secure_url as string
+      await persistImage(uploadedUrl)
+      onUpload?.(uploadedUrl)
+      await refresh()
+      setUploadMessage("Đã upload ảnh thành công")
+    } catch (error) {
+      console.error("Manual upload error", error)
+      setUploadMessage("Không thể upload ảnh. Kiểm tra kết nối và thử lại.")
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    }
   }
-}
-  const disabled = !cloudName || !uploadPreset
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      void uploadFromFile(file)
+    }
+  }
+
+  const deleteImage = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "images", id))
+      await refresh()
+    } catch (err) {
+      console.error("Error deleting:", err)
+      setUploadMessage("Không thể xóa ảnh. Vui lòng thử lại.")
+    }
+  }
 
   return (
     <div className="space-y-4">
-      <button
-        type="button"
-        onClick={handleUpload}
-        disabled={disabled}
-        className={`flex items-center px-4 py-2 rounded-md transition text-white ${disabled ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
-      >
-        <UploadCloud className="w-4 h-4 mr-2" />
-        Upload ảnh mới
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={handleWidgetUpload}
+          disabled={disabled || uploading}
+          className={`flex min-h-[44px] items-center gap-2 rounded-md px-4 py-2 text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-500 ${
+            disabled
+              ? "cursor-not-allowed bg-gray-400"
+              : "bg-blue-600 hover:bg-blue-700"
+          }`}
+        >
+          <UploadCloud className="h-4 w-4" />
+          Upload bằng Cloudinary
+        </button>
+
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={disabled || uploading}
+          className="flex min-h-[44px] items-center gap-2 rounded-md border border-purple-200 px-4 py-2 text-sm font-medium text-purple-600 transition hover:bg-purple-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-500 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {uploading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" /> Đang tải lên...
+            </>
+          ) : (
+            <>
+              <Camera className="h-4 w-4" /> Chụp/Chọn ảnh từ điện thoại
+            </>
+          )}
+        </button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+      </div>
+
       {disabled && (
-        <p className="text-xs text-gray-600">Vui lòng cấu hình Cloudinary để bật upload.</p>
+        <p className="text-xs text-gray-600">
+          Vui lòng cấu hình Cloudinary để bật upload (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME / NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET).
+        </p>
       )}
 
-      <div className="grid grid-cols-3 gap-4">
-     {images.map((img) => (
-  <div
-    key={img.id}
-    className="relative group cursor-pointer border rounded overflow-hidden hover:shadow"
-  >
-    <Image
-      src={img.url}
-      alt="Uploaded"
-      width={150}
-      height={150}
-      className="w-full h-full object-cover"
-      onClick={() => onSelect?.(img.url)}
-    />
+      {uploadMessage && (
+        <div className="rounded-md border border-purple-100 bg-purple-50 px-4 py-2 text-sm text-purple-700">
+          {uploadMessage}
+        </div>
+      )}
 
-    <button
-      onClick={async (e) => {
-        e.stopPropagation()  // 🔑 để không select khi xoá
-        await deleteImage(img.id)
-      }}
-      className="absolute top-1 right-1 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-80 group-hover:opacity-100"
-    >
-      Xoá
-    </button>
-  </div>
-))}
+      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+        {loading && images.length === 0 ? (
+          Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="aspect-square animate-pulse rounded-xl bg-gray-200" />
+          ))
+        ) : images.length === 0 ? (
+          <div className="col-span-full rounded-xl border border-dashed p-6 text-center text-sm text-gray-500">
+            Chưa có ảnh nào. Hãy upload ảnh mới.
+          </div>
+        ) : (
+          images.map((img) => (
+            <div
+              key={img.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => onSelect?.(img.url)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault()
+                  onSelect?.(img.url)
+                }
+              }}
+              className="group relative cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-white outline-none transition focus-visible:ring-2 focus-visible:ring-purple-500"
+            >
+              <div className="relative aspect-square">
+                <Image src={img.url} alt="Uploaded" fill className="object-cover" />
+              </div>
+              <div className="absolute inset-0 bg-black/20 opacity-0 transition-opacity group-hover:opacity-100" />
+              <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-gray-700 shadow">
+                Chọn
+              </span>
 
+              <button
+                type="button"
+                onClick={async (event) => {
+                  event.stopPropagation()
+                  await deleteImage(img.id)
+                }}
+                className="absolute top-2 right-2 rounded-full bg-red-600/90 px-2 py-1 text-xs font-semibold text-white shadow hover:bg-red-600"
+              >
+                Xóa
+              </button>
+            </div>
+          ))
+        )}
       </div>
+
+      {hasMore && (
+        <button
+          type="button"
+          onClick={loadMore}
+          disabled={loadingMore}
+          className="mt-4 w-full rounded-md border px-4 py-2 text-sm font-medium transition hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {loadingMore ? "Đang tải thêm..." : "Tải thêm ảnh"}
+        </button>
+      )}
     </div>
   )
 }
